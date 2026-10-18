@@ -1,6 +1,10 @@
 """Hybrid retrieval: BM25 (FTS5) + dense (Ollama embeddings), fused with RRF, then filtered."""
 
+import heapq
 import math
+import threading
+from functools import lru_cache
+from operator import mul
 
 from helperinlaw.core import ollama
 from helperinlaw.core.store import Store
@@ -19,20 +23,44 @@ def fts_match(text: str) -> str:
     return " OR ".join(f'"{t}"' for t in dict.fromkeys(toks))
 
 
+def unit(v: list[float]) -> list[float]:
+    n = math.sqrt(sum(x * x for x in v))
+    return [x / n for x in v] if n else v
+
+
 def cosine(a: list[float], b: list[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b, strict=True))
-    na, nb = math.sqrt(sum(x * x for x in a)), math.sqrt(sum(y * y for y in b))
-    return dot / (na * nb) if na and nb else 0.0
+    return sum(map(mul, unit(a), unit(b)))
+
+
+_VECS: dict[tuple[int, str, int], list[tuple[str, list[float]]]] = {}
+_VECS_LOCK = threading.Lock()
+
+
+def vectors(store: Store, index_version: str) -> list[tuple[str, list[float]]]:
+    """Unit vectors for the index, loaded once and kept until the embedding count changes."""
+    n = store.db.execute(
+        "SELECT COUNT(*) FROM embeddings WHERE index_version=?", (index_version,)
+    ).fetchone()[0]
+    key = (id(store), index_version, n)
+    with _VECS_LOCK:
+        if key not in _VECS:
+            _VECS.clear()
+            _VECS[key] = [(cid, unit(v)) for cid, v in store.all_embeddings(index_version)]
+        return _VECS[key]
+
+
+@lru_cache(maxsize=256)  # provisions and judgments are searched separately with the same text
+def query_vector(text: str) -> tuple[float, ...]:
+    return tuple(unit(ollama.embed([text])[0]))
 
 
 def dense(store: Store, index_version: str, text: str, limit: int) -> list[tuple[str, float]]:
-    # ponytail: brute-force cosine over every vector; Qdrant when the corpus is large.
-    vecs = store.all_embeddings(index_version)
+    # ponytail: brute-force cosine over every vector (~0.1 s at 9k); Qdrant when the corpus is large.
+    vecs = vectors(store, index_version)
     if not vecs:
         return []
-    qv = ollama.embed([text])[0]
-    scored = sorted(((cid, cosine(qv, v)) for cid, v in vecs), key=lambda x: -x[1])
-    return scored[:limit]
+    qv = query_vector(text)
+    return heapq.nlargest(limit, ((cid, sum(map(mul, qv, v))) for cid, v in vecs), key=lambda x: x[1])
 
 
 def passes(case: Case, f: Filters, store: Store) -> bool:
