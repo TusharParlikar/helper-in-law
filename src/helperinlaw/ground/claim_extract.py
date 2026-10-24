@@ -63,16 +63,28 @@ MAX_CLAIMS = 8
 GOVERNING = 2  # provisions quoted per answer
 RUNNER_UP = 0.85  # share of the top provision's score a second one needs
 LLM_SOURCES = 5  # prompt size drives latency on small local models
+EXCERPT_SENTENCES = 3
 SECTION_TYPE = {"holding": "holding", "reasoning": "ratio", "facts": "fact", "provision": "statute"}
 SECTION_WEIGHT = {"facts": 0.6}  # prefer what the court held over the story
 
 
-def render_sources(sources: list[Source]) -> str:
+def excerpt(text: str, question: str, k: int = EXCERPT_SENTENCES) -> str:
+    """The k sentences that best match the question, in their original order. Prompt length is
+    what makes a small local model slow; quotes stay verbatim because sentences are substrings."""
+    sents = [x for _, p in paragraphs_of(text) or [(0, text)] for x in sentences(p)]
+    if len(sents) <= k:
+        return " ".join(sents)
+    q = content_terms(question)
+    best = sorted(range(len(sents)), key=lambda i: -len(q & content_terms(sents[i])))[:k]
+    return " ".join(sents[i] for i in sorted(best))
+
+
+def render_sources(sources: list[Source], question: str = "") -> str:
     # Only id + text: the model never sees case names, so it can't echo or invent them (G1).
     # The kind (constitution / judgment) is not a name, so it can be shown safely.
     return "\n\n".join(
         f'<source id="{s.id}" kind="{"constitution" if is_provision(s.chunk.case_id) else "judgment"}">'
-        f"\n{s.chunk.text}\n</source>"
+        f"\n{excerpt(s.chunk.text, question) if question else s.chunk.text}\n</source>"
         for s in sources
     )
 
@@ -81,7 +93,7 @@ def llm_claims(model: str, question: str, sources: list[Source]) -> tuple[ClaimS
     """Returns (claims that passed schema validation, count rejected at parse time)."""
     sources = sources[:LLM_SOURCES]
     raw = ollama.chat_json(
-        model, SYSTEM, f"{render_sources(sources)}\n\nSituation or question: {question}", SCHEMA
+        model, SYSTEM, f"{render_sources(sources, question)}\n\nSituation or question: {question}", SCHEMA
     )
     claims, rejected = [], 0
     for item in raw.get("claims", [])[: MAX_CLAIMS * 2]:

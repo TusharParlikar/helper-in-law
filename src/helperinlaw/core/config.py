@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     # G4 needs a judge that is not the answer model. Empty = deterministic lexical judge.
     judge_model: str = ""
     embed_model: str = "nomic-embed-text"
-    use_llm: bool = True
+    # Off by default: a CPU-only local model takes 30-60 s per answer; verbatim mode takes ~2 s.
+    use_llm: bool = False
     use_dense: bool = True
     index_version: str = "v1"
 

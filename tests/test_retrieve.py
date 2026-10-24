@@ -66,3 +66,11 @@ def test_evidence_gate(store: Store, cfg: Settings) -> None:
         store, cfg, "grounds for refusing bail under Section 439 CrPC", None, Profile()
     )
     assert ok
+
+
+def test_excerpt_keeps_best_sentences_verbatim_in_order() -> None:
+    from helperinlaw.ground.claim_extract import excerpt
+
+    text = "⟦4⟧ The weather was fine. The arrest was made at night. ⟦5⟧ Lunch followed. The detenu was not told the grounds of arrest."
+    out = excerpt(text, "arrested without being told the grounds of arrest", k=2)
+    assert out == "The arrest was made at night. The detenu was not told the grounds of arrest."

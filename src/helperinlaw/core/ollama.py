@@ -36,8 +36,9 @@ def chat_json(model: str, system: str, user: str, schema: dict[str, Any]) -> dic
             "format": schema,
             "stream": False,
             "think": False,
+            "keep_alive": "30m",  # reloading the model costs ~15 s on CPU
             # Capped output keeps latency bounded; truncated JSON fails parsing -> caller falls back.
-            "options": {"temperature": 0, "num_predict": 1024},
+            "options": {"temperature": 0, "num_predict": 512},
         },
     )
     try:
