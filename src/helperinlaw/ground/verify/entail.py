@@ -10,12 +10,12 @@ Two judges, both conservative:
 from typing import Literal
 
 from helperinlaw.core import ollama
-from helperinlaw.ground.text import content_terms, polarity_ok
+from helperinlaw.ground.text import content_terms, polarity_ok, stem
 
 Verdict = Literal["supported", "partially", "unsupported"]
 
 # Words that flip a legal outcome. A claim may not introduce one the quote doesn't contain.
-CRITICAL = {t[:5] for t in """allowed dismissed granted refused rejected upheld affirmed reversed
+CRITICAL = {stem(t) for t in """allowed dismissed granted refused rejected upheld affirmed reversed
 quashed acquitted convicted guilty innocent mandatory optional directory permissible prohibited
 valid invalid void overruled followed distinguished murder culpable bailable cognizable always
 never shall must may only life death""".split()}

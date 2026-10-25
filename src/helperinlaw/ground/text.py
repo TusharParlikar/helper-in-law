@@ -40,6 +40,13 @@ def paragraphs_of(chunk_text: str) -> list[tuple[int, str]]:
     ]
 
 
+def stem(word: str) -> str:
+    """Crude but consistent: "means"/"mean", "grounds"/"ground" share a stem."""
+    if len(word) > 3 and word.endswith("s") and not word.endswith("ss"):
+        word = word[:-1]
+    return word[:5]
+
+
 def negated(text: str) -> bool:
     return bool(NEG.search(text))
 
@@ -53,7 +60,7 @@ def negations(text: str) -> set[tuple[str, str]]:
     for i, w in enumerate(words):
         if NEG.fullmatch(w) or w.endswith("n't"):
             nxt = next((x for x in words[i + 1:] if x not in STOP - MODALS), "")
-            pairs.add(("not", nxt[:5]))
+            pairs.add(("not", stem(nxt)))
     return pairs
 
 
@@ -72,4 +79,4 @@ def content_terms(text: str) -> set[str]:
 
     stop = STOP - MODALS  # "may" vs "must" changes the law; keep modals as content
     toks = (NUMBER_WORDS.get(t, t) for t in WORD.findall(text.lower()))
-    return {t[:5] for t in toks if t not in stop and len(t) > 1}
+    return {stem(t) for t in toks if t not in stop and len(t) > 1}
