@@ -94,7 +94,7 @@ def argument_as_holding(c: Claim, s: list[Source], o: list[Claim]) -> Claim | No
     for src in s:
         for line in src.chunk.text.split("\n"):
             if "Learned counsel" in line:
-                sent = re.sub(r"^\[\d+\]\s*", "", line).split(". ")[0].rstrip(".") + "."
+                sent = re.sub(r"^⟦\d+⟧\s*", "", line).split(". ")[0].rstrip(".") + "."
                 return Claim(
                     text=sent, type="holding", support=[SupportRef(source_id=src.id, quote=sent)]
                 )

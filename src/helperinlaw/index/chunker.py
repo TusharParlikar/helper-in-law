@@ -23,7 +23,7 @@ def chunk_case(case: Case, paras: list[Paragraph], max_words: int = MAX_WORDS) -
                     case_id=case.id,
                     para_from=a,
                     para_to=b,
-                    text="\n".join(f"[{p.n}] {p.text}" for p in group),
+                    text="\n".join(f"⟦{p.n}⟧ {p.text}" for p in group),  # ⟦n⟧: never occurs in judgment text
                     prefix=prefix(case, a, b),
                 )
             )

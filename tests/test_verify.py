@@ -18,8 +18,8 @@ from helperinlaw.ground.verify.injection import looks_injected
 from helperinlaw.ground.verify.quote import find_quote
 
 CHUNK = (
-    "[6] Bail may be refused where there is a reasonable apprehension that the accused "
-    "will tamper with the evidence.\n[7] The mere capacity of the wife to earn is not a "
+    "⟦6⟧ Bail may be refused where there is a reasonable apprehension that the accused "
+    "will tamper with the evidence.\n⟦7⟧ The mere capacity of the wife to earn is not a "
     "ground to deny maintenance under Section 125 CrPC."
 )
 
@@ -57,6 +57,12 @@ def test_displayed_quote_is_verbatim_source() -> None:
     # regression: a later clause used to drag in every sentence before it
     article = "Title of the article. (1) First clause applies here. (2) Second clause applies there."
     assert source_span("(2) Second clause applies there.", article) == "(2) Second clause applies there."
+
+
+def test_report_citations_are_not_paragraph_markers() -> None:
+    # regression: "[1993] 2 SCR 581" inside a paragraph was read as paragraph 1993
+    chunk = "⟦12⟧ As held in [1993] 2 SCR 581, custody without grounds of arrest is unlawful here."
+    assert find_quote("custody without grounds of arrest is unlawful here", chunk) == 12
 
 
 def test_quote_too_short_is_rejected() -> None:

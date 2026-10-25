@@ -2,7 +2,8 @@
 
 import re
 
-PARA_MARK = re.compile(r"\[(\d+)\]\s*")
+# Paragraph markers in chunk text. Not "[n]": judgments cite reports as "[1993] 2 SCR 581".
+PARA_MARK = re.compile(r"⟦(\d+)⟧\s*")
 ABBREV = re.compile(r"\b(v|vs|Rs|No|Nos|J|JJ|Dr|Mr|Mrs|Ms|S|Sec|Cr|P|C|i\.e|e\.g|viz|Art|Ltd)\.$")
 NEG = re.compile(r"\b(not|no|never|cannot|nor|neither|without)\b|n't\b", re.I)
 WORD = re.compile(r"[a-z0-9]+")
