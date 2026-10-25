@@ -19,6 +19,7 @@ TOOLS = {
     "lookup_statute",
     "get_profile",
     "set_style",
+    "get_constitution_article",
 }
 
 

@@ -56,7 +56,7 @@ def test_profile_and_feedback(client: TestClient) -> None:
     assert client.post("/feedback", json={"answer_id": 1, "rating": 1}).json()["ok"]
     assert client.post("/feedback", json={"answer_id": 1, "rating": 5}).status_code == 422
     assert client.delete("/profile?profile_id=api").json() == {"deleted": True}
-    assert client.get("/health").json()["cases"] == 8
+    assert client.get("/health").json()["judgments"] == 8
 
 
 def test_links_resolve_to_readable_pages(client: TestClient) -> None:
