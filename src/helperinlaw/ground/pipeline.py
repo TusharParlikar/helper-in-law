@@ -4,6 +4,7 @@ Failure policy (§4.5): drop failed claims; too many dropped -> extractive mode;
 -> abstain.
 """
 
+from collections import Counter
 from typing import Literal
 
 from helperinlaw.core import ollama
@@ -11,6 +12,7 @@ from helperinlaw.core.config import Settings
 from helperinlaw.core.logging import get_logger
 from helperinlaw.core.store import Store
 from helperinlaw.core.types import (
+    Chunk,
     ClaimSet,
     Filters,
     Profile,
@@ -20,7 +22,7 @@ from helperinlaw.core.types import (
 )
 from helperinlaw.ground.claim_extract import extractive_claims, llm_claims
 from helperinlaw.ground.verify import verify
-from helperinlaw.ingest.official import is_provision
+from helperinlaw.ingest.official import PREFIX
 from helperinlaw.retrieve.evidence_gate import enough_evidence
 from helperinlaw.retrieve.hybrid import search
 from helperinlaw.retrieve.rerank import rerank
@@ -29,6 +31,7 @@ from helperinlaw.retrieve.understand import understand
 
 log = get_logger(__name__)
 MAX_PROVISIONS, MAX_JUDGMENTS = 4, 6
+PRECEDENT_BOOST = 0.4  # added to a provision cited by every retrieved judgment
 Mode = Literal["synthesised", "extractive"]
 
 
@@ -36,11 +39,35 @@ def retrieve(
     store: Store, cfg: Settings, question: str, filters: Filters | None, profile: Profile
 ) -> tuple[list[Source], bool]:
     q = understand(question, filters)
-    hits = search(store, q, rewrite(q), cfg.index_version, cfg.use_dense)
-    ranked = rerank(store, q, hits, profile, top=40, index_version=cfg.index_version)
-    # A scenario needs both: the constitutional text that governs it and precedent applying it.
-    provisions = [x for x in ranked if is_provision(x[0].case_id)][:MAX_PROVISIONS]
-    judgments = [x for x in ranked if not is_provision(x[0].case_id)][:MAX_JUDGMENTS]
+    queries = rewrite(q)
+
+    # A scenario needs both: the constitutional text that governs it and precedent applying it,
+    # searched separately so one long judgment can't crowd the Constitution out.
+    def best(kind: str, n: int, per_case: int, extra: list[Chunk] | None = None,
+             boost: dict[str, float] | None = None) -> list[tuple[Chunk, float]]:
+        hits = search(store, q, queries, cfg.index_version, cfg.use_dense, 60, kind)
+        seen = {c.id for c, _ in hits}
+        hits += [(c, 0.0) for c in extra or [] if c.id not in seen]
+        scored = [
+            (c, round(s + (boost or {}).get(c.case_id, 0.0), 4))
+            for c, s in rerank(store, q, hits, profile, top=80, index_version=cfg.index_version)
+        ]
+        out: list[tuple[Chunk, float]] = []
+        count: Counter[str] = Counter()
+        for chunk, score in sorted(scored, key=lambda x: -x[1]):
+            if count[chunk.case_id] < per_case:
+                out.append((chunk, score))
+                count[chunk.case_id] += 1
+        return out[:n]
+
+    judgments = best("judgment", MAX_JUDGMENTS, 2)
+    # Precedent votes for the provisions: an article the retrieved judgments apply is likely
+    # the one governing the situation, even when the user's words don't match its text.
+    cases = {c.case_id for c, _ in judgments}
+    applied = Counter(s for cid in cases for act, s in store.statutes_of(cid) if act == "CONST")
+    extra = [c for a in applied if (c := store.get_chunk(cfg.index_version, f"{PREFIX}{a}:1-1"))]
+    boost = {f"{PREFIX}{a}": PRECEDENT_BOOST * k / len(cases) for a, k in applied.items()}
+    provisions = best("provision", MAX_PROVISIONS, 1, extra, boost)
     ranked = sorted(provisions + judgments, key=lambda x: -x[1])
     sources = [Source(id=f"S{i + 1}", chunk=c, score=s) for i, (c, s) in enumerate(ranked)]
     ok = enough_evidence(store, q, ranked, cfg.evidence_min_score, cfg.evidence_min_passages)
