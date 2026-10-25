@@ -16,9 +16,9 @@ from helperinlaw.core.types import (
     VerifiedClaimSet,
 )
 from helperinlaw.ground.pipeline import answer_content, retrieve
-from helperinlaw.ground.render import render_citations
+from helperinlaw.ground.render import case_url, law_ref, render_citations, render_laws
 from helperinlaw.ground.verify.graph import treatment
-from helperinlaw.parse.statutes import ACT_NAMES, aliases, normalise_act
+from helperinlaw.parse.statutes import ACT_NAMES, aliases, extract_statutes, normalise_act
 from helperinlaw.present.final_guard import guard
 from helperinlaw.present.overrides import parse_overrides, strip_overrides
 from helperinlaw.present.presenter import present
@@ -26,6 +26,12 @@ from helperinlaw.present.profile import apply_style, suggest_setting, update_pro
 from helperinlaw.present.translate import translate
 
 MAX_SEARCH = 20
+
+
+def extract_statutes_in(text: str, act: str, section: str) -> bool:
+    return (act, section) in extract_statutes(text)
+
+
 MAX_PARAS = 10
 
 
@@ -80,7 +86,7 @@ class Service:
             "citation_style": profile.citation_style,
         }
 
-        citations, by_claim = render_citations(self.store, vcs.claims)
+        citations, by_claim = render_citations(self.store, vcs.claims, self.cfg.public_url)
         blocks = present(vcs.claims, by_claim, citations, profile)
         if profile.answer_language != "en" and blocks:
             english = blocks
@@ -150,6 +156,12 @@ class Service:
             profile_applied=applied,
             notices=notices,
             answer_id=answer_id,
+            laws=render_laws(
+                self.store,
+                citations,
+                [legal_q] + [c.claim.text for c in vcs.claims],
+                self.cfg.public_url,
+            ),
         )
 
     def chat_case(
@@ -184,6 +196,7 @@ class Service:
                         "paras": f"{s.chunk.para_from}-{s.chunk.para_to}",
                         "snippet": s.chunk.text[:300],
                         "score": s.score,
+                        "url": case_url(self.cfg.public_url, case.id, s.chunk.para_from),
                     }
                 )
         return out
@@ -200,7 +213,26 @@ class Service:
             "sections": sections,
             "treatment": treatment(self.store, case_id),
             "statutes": [f"{a} {s}" for a, s in self.store.statutes_of(case_id)],
+            "laws": [
+                law_ref(a, s, self.cfg.public_url).model_dump()
+                for a, s in self.store.statutes_of(case_id)
+            ],
+            "url": case_url(self.cfg.public_url, case_id),
         }
+
+    def list_cases(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "case_id": c.id,
+                "title": c.title,
+                "court": c.court,
+                "date": c.date,
+                "citation": c.citation,
+                "treatment": treatment(self.store, c.id),
+                "url": case_url(self.cfg.public_url, c.id),
+            }
+            for c in self.store.list_cases()
+        ]
 
     def get_paragraphs(
         self, case_id: str, start: int, end: int | None = None
@@ -225,6 +257,7 @@ class Service:
                         "date": c.date,
                         "treatment": e["treatment"],
                         "para": e["para"],
+                        "url": case_url(self.cfg.public_url, c.id, e["para"]),
                     }
                 )
         return out
@@ -237,6 +270,14 @@ class Service:
         for a, s in refs:
             for cid in self.store.cases_for_statute(a, s):
                 c = self.store.get_case(cid)
+                para = next(
+                    (
+                        p.n
+                        for p in self.store.get_paragraphs(cid)
+                        if extract_statutes_in(p.text, a, s)
+                    ),
+                    None,
+                )
                 if c and all(x["case_id"] != cid for x in cases):
                     cases.append(
                         {
@@ -245,12 +286,14 @@ class Service:
                             "citation": c.citation,
                             "date": c.date,
                             "treatment": treatment(self.store, cid),
+                            "url": case_url(self.cfg.public_url, c.id, para),
                         }
                     )
         return {
             "query": f"{code} {section}",
             "equivalents": [f"{a} {s} ({ACT_NAMES.get(a, [a])[0]})" for a, s in refs],
             "cases": cases[:MAX_SEARCH],
+            "law": law_ref(code, section, self.cfg.public_url).model_dump(),
             "note": "Correspondence table: verify against the official mapping.",
         }
 
