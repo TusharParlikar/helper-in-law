@@ -5,19 +5,34 @@ from urllib.parse import quote
 from helperinlaw.core.store import Store
 from helperinlaw.core.types import Citation, LawRef, VerifiedClaim
 from helperinlaw.ground.verify.graph import treatment
+from helperinlaw.ingest.official import COI_EDITION, PREFIX, is_provision
 from helperinlaw.parse.statutes import ACT_NAMES, aliases, extract_statutes
 
 ACT_LABEL = {**{a: names[0] for a, names in ACT_NAMES.items()}, "CONST": "Constitution of India"}
+
+
+def source_of(case_id: str) -> str:
+    if case_id.startswith("sc-"):
+        return "Supreme Court of India, e-SCR (Indian Supreme Court Judgments dataset, CC-BY-4.0)"
+    return "Sample corpus (fictional judgment written for testing)"
 
 
 def case_url(base: str, case_id: str, para: int | str | None = None) -> str:
     return f"{base}/cases/{case_id}/view" + (f"#para-{para}" if para else "")
 
 
-def law_ref(act: str, section: str, base: str) -> LawRef:
+def law_ref(act: str, section: str, base: str, store: Store | None = None) -> LawRef:
     name = ACT_LABEL.get(act, act)
     unit = "Article" if act == "CONST" else "Section"
     search = quote(f"site:indiacode.nic.in {name} {unit.lower()} {section}")
+    article = store.get_case(f"{PREFIX}{section}") if store and act == "CONST" else None
+    if article:  # the official government text is indexed: link the exact page, carry the text
+        paras = store.get_paragraphs(article.id) if store else []
+        return LawRef(
+            act=act, section=section, label=f"Article {section}, Constitution of India",
+            url=f"{base}/statutes/{act}/{section}/view", official_url=article.url,
+            text=paras[0].text if paras else "", source=COI_EDITION,
+        )
     return LawRef(
         act=act,
         section=section,
@@ -35,7 +50,7 @@ def render_laws(
     applied = {tuple(x.split(" ", 1)) for c in citations for x in c.statutes}
     named = {r for t in texts for s in extract_statutes(t) for r in aliases(*s)}
     chosen = (applied & named) or applied
-    return [law_ref(a, s, base) for a, s in sorted(chosen)][:8]
+    return [law_ref(a, s, base, store) for a, s in sorted(chosen)][:8]
 
 
 def render_citations(
@@ -66,9 +81,11 @@ def render_citations(
                         neutral_citation=case.neutral_citation,
                         para=str(r.para),
                         quote=r.quote,
-                        url=case_url(base, case.id, r.para),
+                        url=case.url if is_provision(case.id) else case_url(base, case.id, r.para),
                         treatment=treatment(store, case.id),
                         statutes=[f"{a} {s}" for a, s in store.statutes_of(case.id)],
+                        kind="provision" if is_provision(case.id) else "judgment",
+                        source=COI_EDITION if is_provision(case.id) else source_of(case.id),
                     )
                 )
             ids.append(index[key])

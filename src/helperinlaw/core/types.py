@@ -128,6 +128,8 @@ class Citation(BaseModel):
     url: str = ""  # full judgment, opened at the cited paragraph
     treatment: Treatment = "unknown"
     statutes: list[str] = []  # provisions this judgment applies, e.g. "IPC 302"
+    kind: Literal["judgment", "provision"] = "judgment"
+    source: str = ""  # who published the text this quote was checked against
 
 
 class LawRef(BaseModel):
@@ -138,7 +140,9 @@ class LawRef(BaseModel):
     label: str  # "Section 439, Code of Criminal Procedure"
     equivalents: list[str] = []  # old/new-code counterpart, e.g. "BNSS 483"
     url: str = ""  # in-app page: equivalents + judgments applying it
-    official_url: str = ""  # search for the official text on India Code
+    official_url: str = ""  # official text: the exact PDF page, or a search on India Code
+    text: str = ""  # official text when indexed (Constitution articles)
+    source: str = ""
 
 
 class Coverage(BaseModel):
