@@ -56,6 +56,9 @@ def test_lexical_judge() -> None:
     assert lexical_verdict("A wife's capacity to earn is a ground to deny maintenance.", q) == "unsupported"
     assert lexical_verdict("Capacity to earn is not a ground to deny maintenance, so the petition is allowed.", q) == "unsupported"
     assert lexical_verdict("Maintenance must always be granted.", q) == "unsupported"
+    # regression: "means" vs "does not mean" once slipped through on a stem mismatch
+    assert lexical_verdict("Soon before her death means immediately before death.",
+                           'The expression "soon before her death" does not mean immediately before.') == "unsupported"
 
 
 def test_allowlist_strips_unknown_cases() -> None:
