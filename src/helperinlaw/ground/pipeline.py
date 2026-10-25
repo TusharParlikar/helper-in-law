@@ -20,6 +20,7 @@ from helperinlaw.core.types import (
 )
 from helperinlaw.ground.claim_extract import extractive_claims, llm_claims
 from helperinlaw.ground.verify import verify
+from helperinlaw.ingest.official import is_provision
 from helperinlaw.retrieve.evidence_gate import enough_evidence
 from helperinlaw.retrieve.hybrid import search
 from helperinlaw.retrieve.rerank import rerank
@@ -27,6 +28,7 @@ from helperinlaw.retrieve.rewrite import rewrite
 from helperinlaw.retrieve.understand import understand
 
 log = get_logger(__name__)
+MAX_PROVISIONS, MAX_JUDGMENTS = 4, 6
 Mode = Literal["synthesised", "extractive"]
 
 
@@ -35,7 +37,11 @@ def retrieve(
 ) -> tuple[list[Source], bool]:
     q = understand(question, filters)
     hits = search(store, q, rewrite(q), cfg.index_version, cfg.use_dense)
-    ranked = rerank(store, q, hits, profile)
+    ranked = rerank(store, q, hits, profile, top=40, index_version=cfg.index_version)
+    # A scenario needs both: the constitutional text that governs it and precedent applying it.
+    provisions = [x for x in ranked if is_provision(x[0].case_id)][:MAX_PROVISIONS]
+    judgments = [x for x in ranked if not is_provision(x[0].case_id)][:MAX_JUDGMENTS]
+    ranked = sorted(provisions + judgments, key=lambda x: -x[1])
     sources = [Source(id=f"S{i + 1}", chunk=c, score=s) for i, (c, s) in enumerate(ranked)]
     ok = enough_evidence(store, q, ranked, cfg.evidence_min_score, cfg.evidence_min_passages)
     return sources, ok
