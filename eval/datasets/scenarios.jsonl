@@ -1,0 +1,47 @@
+{"scenario": "My client was arrested at night by the police and kept in custody for two days. He was not told why he was arrested and was not allowed to call a lawyer.", "articles": ["22"], "area": "arrest and detention"}
+{"scenario": "My client was arrested and kept in the police station for three days without being produced before any magistrate.", "articles": ["22"], "area": "arrest and detention"}
+{"scenario": "The police refused to let my client consult and be defended by a lawyer of his choice after his arrest.", "articles": ["22"], "area": "arrest and detention"}
+{"scenario": "My client is held under preventive detention and was never told the grounds of detention or allowed to make a representation.", "articles": ["22"], "area": "arrest and detention"}
+{"scenario": "My client was beaten and tortured by the police while in custody.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "A man died in police custody and his family says he was assaulted by officers.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "The police are tapping my client's phone and monitoring his messages without any legal authority, violating his privacy.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "My client has been in jail as an undertrial for six years and his trial has still not begun.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "My client was kept in prison for years even after being granted bail because he could not pay the surety.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "A poor accused was tried without any lawyer because the State did not provide free legal aid.", "articles": ["21", "39A"], "area": "life and personal liberty"}
+{"scenario": "The authorities demolished the homes of slum dwellers without notice, leaving families without shelter.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "A government hospital refused emergency treatment to an injured accident victim.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "Factories are polluting the river that the village depends on for drinking water.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "My client is an 80-year-old widow with no income, abandoned by her children, and the State provides no pension or old age home.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "An accused was handcuffed and paraded in public while being taken to court.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "My client was denied a passport without being given any reason or hearing.", "articles": ["21", "14"], "area": "life and personal liberty"}
+{"scenario": "My client posted criticism of a government policy online and the authorities ordered the post removed and threatened action.", "articles": ["19"], "area": "speech and expression"}
+{"scenario": "A journalist was arrested for publishing a news report critical of the state government.", "articles": ["19"], "area": "speech and expression"}
+{"scenario": "The government shut down mobile internet in the whole district for months.", "articles": ["19"], "area": "speech and expression"}
+{"scenario": "The police banned a peaceful protest march by farmers without giving reasons.", "articles": ["19"], "area": "speech and expression"}
+{"scenario": "A film was banned by the state even though it was certified by the censor board.", "articles": ["19"], "area": "speech and expression"}
+{"scenario": "The municipality cancelled my client's trade licence and stopped his business without any hearing.", "articles": ["19", "14"], "area": "trade and occupation"}
+{"scenario": "A new rule completely prohibits my client from carrying on his profession in the state.", "articles": ["19"], "area": "trade and occupation"}
+{"scenario": "A state scheme gives benefits to one group of employees but excludes another group doing identical work, with no reason given.", "articles": ["14"], "area": "equality"}
+{"scenario": "The government awarded a contract to a favoured company without any tender, ignoring better offers.", "articles": ["14"], "area": "equality"}
+{"scenario": "Temporary employees doing the same work as permanent staff are paid far less.", "articles": ["14", "39"], "area": "equality"}
+{"scenario": "A government order was passed arbitrarily, without reasons and without hearing the people affected.", "articles": ["14"], "area": "equality"}
+{"scenario": "A college denied admission to my client only because of her caste.", "articles": ["15"], "area": "discrimination"}
+{"scenario": "A hotel refused entry to my client because of his religion.", "articles": ["15"], "area": "discrimination"}
+{"scenario": "A state recruitment rule bars women from applying for posts in the department.", "articles": ["16", "15"], "area": "public employment"}
+{"scenario": "The government denied my client a public job only because of where he was born.", "articles": ["16"], "area": "public employment"}
+{"scenario": "Reservation in promotions in government service was introduced without data on backwardness.", "articles": ["16"], "area": "public employment"}
+{"scenario": "Villagers prevent a Dalit family from using the common well and temple.", "articles": ["17", "15"], "area": "discrimination"}
+{"scenario": "Workers are being forced to work as bonded labourers to repay a loan.", "articles": ["23"], "area": "exploitation"}
+{"scenario": "Children below fourteen are employed in a hazardous fireworks factory.", "articles": ["24"], "area": "exploitation"}
+{"scenario": "The State banned a religious practice of my client's community.", "articles": ["25"], "area": "religion"}
+{"scenario": "Women of a certain age group are barred by custom from entering a public temple.", "articles": ["25", "15", "14"], "area": "religion"}
+{"scenario": "The government took over the management of a minority community's educational institution.", "articles": ["30"], "area": "minority rights"}
+{"scenario": "My client is being prosecuted a second time for the same offence after already being punished.", "articles": ["20"], "area": "criminal process"}
+{"scenario": "The police forced my client to sign a confession statement against himself.", "articles": ["20"], "area": "criminal process"}
+{"scenario": "My client is being punished under a law that was made after he committed the act.", "articles": ["20"], "area": "criminal process"}
+{"scenario": "Children in a village have no school and the State has not provided free education.", "articles": ["21A"], "area": "education"}
+{"scenario": "A private school refuses to admit children from poor families under the free seats quota.", "articles": ["21A"], "area": "education"}
+{"scenario": "My client's land was taken by the State for a project without any law authorising it and without compensation.", "articles": ["300A"], "area": "property"}
+{"scenario": "A government employee was dismissed from service without an inquiry or an opportunity to defend himself.", "articles": ["311", "14"], "area": "service law"}
+{"scenario": "My client's fundamental rights were violated and he wants to approach the Supreme Court directly.", "articles": ["32"], "area": "writs"}
+{"scenario": "My client wants the High Court to quash an illegal government order by issuing a writ.", "articles": ["226"], "area": "writs"}
