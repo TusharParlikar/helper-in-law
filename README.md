@@ -7,7 +7,7 @@
 ![llm](https://img.shields.io/badge/LLM-Ollama%20(local)-black)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
-🎬 **Watch the 50-second product film:** [`docs/trailer.mp4`](docs/trailer.mp4)
+🎬 **Watch:** [trailer](docs/trailer.mp4) (49 s) · [product walkthrough](docs/product_video.mp4) (62 s, narrated)
 
 > ⚠️ **Not legal advice.** This is a research aid. Always read the cited judgment and verify the current state of the law.
 
