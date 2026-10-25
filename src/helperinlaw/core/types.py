@@ -76,12 +76,16 @@ class ClaimSet(BaseModel):
     gaps: list[str] = []
 
 
+class VerifiedRef(BaseModel):
+    case_id: str
+    para: int  # the paragraph the quote was found in, located by the verifier, not the LLM
+    quote: str
+
+
 class VerifiedClaim(BaseModel):
     id: str  # c1, c2...
     claim: Claim
-    case_id: str
-    para_from: int
-    para_to: int
+    refs: list[VerifiedRef] = Field(min_length=1)
 
 
 class VerificationReport(BaseModel):
