@@ -26,7 +26,6 @@ from helperinlaw.parse.statutes import extract_statutes
 log = get_logger(__name__)
 BUCKET = "https://indian-supreme-court-judgments.s3.amazonaws.com"
 RAW = Path("data/raw/sci")
-SOURCE = "Supreme Court of India (e-SCR) via the Indian Supreme Court Judgments dataset, CC-BY-4.0"
 # Fundamental rights and writ articles a scenario most often turns on.
 KEY_ARTICLES = re.compile(
     r"\bArt(?:icle|s?\.)\s*(14|15|16|19|20|21|21A|22|25|32|226|300A|311)\b", re.I
