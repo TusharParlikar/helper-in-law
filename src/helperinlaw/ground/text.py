@@ -44,6 +44,29 @@ def negated(text: str) -> bool:
     return bool(NEG.search(text))
 
 
+def negations(text: str) -> set[tuple[str, str]]:
+    """(negator, the next content word) pairs: "is not a ground" -> ("not", "groun")."""
+    from helperinlaw.retrieve.understand import STOP
+
+    words = re.findall(r"[a-z0-9']+", text.lower())
+    pairs = set()
+    for i, w in enumerate(words):
+        if NEG.fullmatch(w) or w.endswith("n't"):
+            nxt = next((x for x in words[i + 1:] if x not in STOP - MODALS), "")
+            pairs.add(("not", nxt[:5]))
+    return pairs
+
+
+def polarity_ok(claim: str, quote: str) -> bool:
+    """Every negation in the claim is in the quote, and no negation in the quote is dropped
+    from a word the claim uses."""
+    c, q = negations(claim), negations(quote)
+    if not c <= q:
+        return False
+    used = content_terms(claim)
+    return all(pair in c for pair in q if pair[1] in used)
+
+
 def content_terms(text: str) -> set[str]:
     from helperinlaw.retrieve.understand import STOP
 

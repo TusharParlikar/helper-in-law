@@ -10,7 +10,7 @@ Two judges, both conservative:
 from typing import Literal
 
 from helperinlaw.core import ollama
-from helperinlaw.ground.text import content_terms, negated
+from helperinlaw.ground.text import content_terms, polarity_ok
 
 Verdict = Literal["supported", "partially", "unsupported"]
 
@@ -33,7 +33,7 @@ JUDGE_SYSTEM = (
 
 
 def lexical_verdict(claim: str, quote: str) -> Verdict:
-    if negated(claim) != negated(quote):
+    if not polarity_ok(claim, quote):
         return "unsupported"
     c, q = content_terms(claim), content_terms(quote)
     if not c:
@@ -49,7 +49,7 @@ def judge(claim: str, quote: str, judge_model: str, answer_model: str) -> Verdic
     lexical = lexical_verdict(claim, quote)
     if not judge_model or judge_model == answer_model:
         return lexical
-    if negated(claim) != negated(quote):
+    if not polarity_ok(claim, quote):
         return "unsupported"  # deterministic guard holds even with an LLM judge
     try:
         out = ollama.chat_json(judge_model, JUDGE_SYSTEM,
