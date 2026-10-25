@@ -5,7 +5,7 @@ import math
 from helperinlaw.core import ollama
 from helperinlaw.core.store import Store
 from helperinlaw.core.types import Case, Chunk, Filters
-from helperinlaw.ingest.official import is_provision
+from helperinlaw.ingest.official import PREFIX, is_provision
 from helperinlaw.parse.metadata import short_court
 from helperinlaw.parse.statutes import aliases
 from helperinlaw.retrieve.understand import Query, terms
@@ -59,15 +59,26 @@ def passes(case: Case, f: Filters, store: Store) -> bool:
 
 
 def search(
-    store: Store, q: Query, queries: list[str], index_version: str, use_dense: bool, limit: int = 30
+    store: Store,
+    q: Query,
+    queries: list[str],
+    index_version: str,
+    use_dense: bool,
+    limit: int = 30,
+    kind: str | None = None,
 ) -> list[tuple[Chunk, float]]:
+    """kind: "provision" (Constitution only), "judgment" (everything else) or None (both)."""
+    like, negate = (f"{PREFIX}%", kind == "judgment") if kind else ("%", False)
     rankings: list[list[str]] = []
     for text in queries:
         if match := fts_match(text):
-            rankings.append([cid for cid, _ in store.bm25(index_version, match, POOL)])
+            rankings.append([cid for cid, _ in store.bm25(index_version, match, POOL, like, negate)])
     if use_dense:
         try:
-            rankings.append([cid for cid, _ in dense(store, index_version, q.text, POOL)])
+            hits = dense(store, index_version, q.text, POOL * 3)
+            if kind:
+                hits = [h for h in hits if is_provision(h[0]) == (kind == "provision")]
+            rankings.append([cid for cid, _ in hits[:POOL]])
         except ollama.OllamaError:
             pass  # dense is an enhancement; BM25 alone still answers
     fused: dict[str, float] = {}

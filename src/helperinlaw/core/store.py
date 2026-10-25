@@ -197,11 +197,15 @@ class Store:
         )
         return [Chunk(**dict(r)) for r in rows]
 
-    def bm25(self, index_version: str, match: str, limit: int) -> list[tuple[str, float]]:
+    def bm25(
+        self, index_version: str, match: str, limit: int, id_like: str = "%", negate: bool = False
+    ) -> list[tuple[str, float]]:
+        """`id_like` narrows by chunk id ("coi-%" = Constitution articles); `negate` excludes it."""
+        op = "NOT LIKE" if negate else "LIKE"
         rows = self.db.execute(
             "SELECT chunk_id, bm25(chunks_fts) AS s FROM chunks_fts "
-            "WHERE chunks_fts MATCH ? AND index_version=? ORDER BY s LIMIT ?",
-            (match, index_version, limit),
+            f"WHERE chunks_fts MATCH ? AND index_version=? AND chunk_id {op} ? ORDER BY s LIMIT ?",
+            (match, index_version, id_like, limit),
         )
         return [(r[0], -r[1]) for r in rows]  # FTS5 bm25 is lower-is-better
 
