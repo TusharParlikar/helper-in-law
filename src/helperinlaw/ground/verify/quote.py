@@ -13,13 +13,23 @@ def find_quote(quote: str, chunk_text: str, fuzzy_ratio: float = 0.97) -> int | 
     q = normalise(quote).strip(" .\"'")
     if len(q.split()) < MIN_QUOTE_WORDS:
         return None
+    qw = q.split()
     for n, para in paragraphs_of(chunk_text):
         p = normalise(para)
         if q in p:
             return n
-        m = SequenceMatcher(None, q, p, autojunk=False).find_longest_match(0, len(q), 0, len(p))
-        start = max(0, m.b - m.a)
-        window = p[start : start + len(q)]
-        if SequenceMatcher(None, q, window, autojunk=False).ratio() >= fuzzy_ratio:
+        if fuzzy_match(qw, p.split(), fuzzy_ratio):
             return n
     return None
+
+
+def fuzzy_match(qw: list[str], pw: list[str], ratio: float) -> bool:
+    """OCR noise changes letters, not whole words: compare equal-length word windows, and every
+    word must have a close counterpart. Dropping or adding a word ("not") never matches."""
+    for i in range(len(pw) - len(qw) + 1):
+        win = pw[i : i + len(qw)]
+        if SequenceMatcher(None, " ".join(qw), " ".join(win), autojunk=False).ratio() < ratio:
+            continue
+        if all(a == b or SequenceMatcher(None, a, b).ratio() >= 0.75 for a, b in zip(qw, win, strict=True)):
+            return True
+    return False
