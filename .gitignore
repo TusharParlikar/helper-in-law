@@ -10,3 +10,4 @@ data/*.db-*
 data/raw/
 eval/reports/*.json
 data/official/*.pdf
+docs/film_work/
