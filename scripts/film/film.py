@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 from motion import (
     BLACK, FPS, GREY_D, H, INK, SR, W, WHITE, bloom, day_counter, encoder, ease, env, font, framed, icon,
-    master, motes, mux, put, scales, score, screen_frames, wall, words, write_wav,
+    compress, finish, motes, music_bed, mux, put, scales, screen_frames, wall, words, write_wav,
 )
 from PIL import Image
 
@@ -141,7 +141,7 @@ def voice(model: Path, scenes: list[Scene], work: Path) -> list[np.ndarray]:
     return clips
 
 
-def main(rec: Path, model: Path, out: Path) -> None:
+def main(rec: Path, model: Path, out: Path, audio_only: bool = False) -> None:
     marks = json.loads((rec / "marks.json").read_text())
     work = out.parent / "film_work"
     work.mkdir(parents=True, exist_ok=True)
@@ -160,6 +160,27 @@ def main(rec: Path, model: Path, out: Path) -> None:
     total = sum(durs)
 
     silent = work / "film.silent.mp4"
+    if not (audio_only and silent.exists()):
+        render(scenes, durs, marks, rec, silent)
+
+    # Grief until the turn, then Morning Mood from its first note: its sunrise peaks near the end.
+    music = compress(music_bed(total, TURN, dawn_from=0.0))
+    vo = np.zeros(len(music))
+    for st, clip in zip(starts, clips, strict=True):
+        i = int((st + 0.45) * SR)
+        j = min(len(vo), i + len(clip))
+        vo[i:j] += clip[: j - i]
+    speech = np.abs(vo) > 0.01
+    music *= 0.30 * np.sqrt(np.mean(vo[speech] ** 2)) / np.sqrt(np.mean(music**2))
+    win = int(0.3 * SR)
+    duck = 1 - 0.45 * np.clip(np.convolve(speech.astype(float), np.ones(win) / win, "same") * 3, 0, 1)
+    wav = work / "film.wav"
+    write_wav(wav, finish(vo[:, None] + music * duck[:, None]))
+    mux(silent, wav, out)
+    print(f"wrote {out} ({total:.1f}s; turn at {TURN}s)")
+
+
+def render(scenes: list[Scene], durs: list[float], marks: dict, rec: Path, silent: Path) -> None:  # type: ignore[type-arg]
     enc = encoder(silent)
     assert enc.stdin
     for sc, dur in zip(scenes, durs, strict=True):
@@ -178,20 +199,6 @@ def main(rec: Path, model: Path, out: Path) -> None:
     enc.stdin.close()
     enc.wait()
 
-    music = score(total, TURN, starts[-2], build=TURN + 18)
-    vo = np.zeros(len(music))
-    for st, clip in zip(starts, clips, strict=True):
-        i = int((st + 0.45) * SR)
-        j = min(len(vo), i + len(clip))
-        vo[i:j] += clip[: j - i]
-    win = int(0.3 * SR)
-    active = np.convolve((np.abs(vo) > 0.01).astype(float), np.ones(win) / win, "same")
-    duck = 1 - 0.5 * np.clip(active * 3, 0, 1)
-    wav = work / "film.wav"
-    write_wav(wav, master(vo * 1.05 + music / max(1e-6, np.abs(music).max()) * 0.32 * duck))
-    mux(silent, wav, out)
-    print(f"wrote {out} ({total:.1f}s; turn at {TURN}s)")
-
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]))
+    main(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]), "--audio-only" in sys.argv)
