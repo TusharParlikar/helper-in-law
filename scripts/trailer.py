@@ -19,7 +19,6 @@ from PIL import Image  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "trailer.mp4"
 TURN = 15.0  # the moment the light comes in, in picture and in music
-DAWN_FROM = 20.0  # start Morning Mood here so its sunrise peaks on the closing beats
 
 
 def s_wall(t: float, dur: float) -> Image.Image:
@@ -96,7 +95,7 @@ TOTAL = OUTRO + END_DUR
 
 def audio(silent: Path, work: Path) -> None:
     wav = work / "trailer.wav"
-    write_wav(wav, finish(music_bed(TOTAL, TURN, DAWN_FROM)))
+    write_wav(wav, finish(music_bed(TOTAL, TURN)))
     mux(silent, wav, OUT)
 
 

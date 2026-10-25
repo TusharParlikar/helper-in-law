@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 from motion import (
     BLACK, FPS, GREY_D, H, INK, SR, W, WHITE, bloom, day_counter, encoder, ease, env, font, framed, icon,
-    compress, finish, motes, music_bed, mux, put, scales, screen_frames, wall, words, write_wav,
+    compress, finish, motes, music_bed, smooth, mux, put, scales, screen_frames, wall, words, write_wav,
 )
 from PIL import Image
 
@@ -163,8 +163,8 @@ def main(rec: Path, model: Path, out: Path, audio_only: bool = False) -> None:
     if not (audio_only and silent.exists()):
         render(scenes, durs, marks, rec, silent)
 
-    # Grief until the turn, then Morning Mood from its first note: its sunrise peaks near the end.
-    music = compress(music_bed(total, TURN, dawn_from=0.0))
+    # Sombre until the turn, then the braam and the drop.
+    music = compress(music_bed(total, TURN))
     vo = np.zeros(len(music))
     for st, clip in zip(starts, clips, strict=True):
         i = int((st + 0.45) * SR)
@@ -173,7 +173,7 @@ def main(rec: Path, model: Path, out: Path, audio_only: bool = False) -> None:
     speech = np.abs(vo) > 0.01
     music *= 0.30 * np.sqrt(np.mean(vo[speech] ** 2)) / np.sqrt(np.mean(music**2))
     win = int(0.3 * SR)
-    duck = 1 - 0.45 * np.clip(np.convolve(speech.astype(float), np.ones(win) / win, "same") * 3, 0, 1)
+    duck = 1 - 0.45 * np.clip(smooth(speech.astype(float), win) * 3, 0, 1)
     wav = work / "film.wav"
     write_wav(wav, finish(vo[:, None] + music * duck[:, None]))
     mux(silent, wav, out)
