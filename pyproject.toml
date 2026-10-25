@@ -34,6 +34,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]  # the formatter owns line length; long strings stay readable
 
 [tool.mypy]
 python_version = "3.12"
