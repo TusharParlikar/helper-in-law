@@ -11,7 +11,9 @@ BATCH = 32
 
 def build(store: Store, index_version: str, dense: bool) -> dict[str, int]:
     """Side-by-side rebuild: a new index_version never touches the one being served."""
-    chunks = [c for case in store.list_cases() for c in chunk_case(case, store.get_paragraphs(case.id))]
+    chunks = [
+        c for case in store.list_cases() for c in chunk_case(case, store.get_paragraphs(case.id))
+    ]
     store.replace_chunks(index_version, chunks)
     embedded = 0
     if dense:
@@ -20,7 +22,11 @@ def build(store: Store, index_version: str, dense: bool) -> dict[str, int]:
         for i in range(0, len(todo), BATCH):
             batch = todo[i : i + BATCH]
             vecs = ollama.embed([c.prefix + "\n" + c.text for c in batch])
-            store.put_embeddings(index_version, [(c.id, v) for c, v in zip(batch, vecs, strict=True)])
+            store.put_embeddings(
+                index_version, [(c.id, v) for c, v in zip(batch, vecs, strict=True)]
+            )
             embedded += len(batch)
-    log.info("index built", extra={"extra_fields": {"version": index_version, "chunks": len(chunks)}})
+    log.info(
+        "index built", extra={"extra_fields": {"version": index_version, "chunks": len(chunks)}}
+    )
     return {"chunks": len(chunks), "embedded": embedded}

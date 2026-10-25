@@ -22,8 +22,9 @@ def coverage(query: str, text: str) -> float:
     return len(q & doc) / len(q)
 
 
-def rerank(store: Store, q: Query, hits: list[tuple[Chunk, float]], profile: Profile,
-           top: int = 8) -> list[tuple[Chunk, float]]:
+def rerank(
+    store: Store, q: Query, hits: list[tuple[Chunk, float]], profile: Profile, top: int = 8
+) -> list[tuple[Chunk, float]]:
     wanted = {a for act, s in q.statutes for a in aliases(act, s)}
     scored = []
     for chunk, _ in hits:
@@ -36,9 +37,10 @@ def rerank(store: Store, q: Query, hits: list[tuple[Chunk, float]], profile: Pro
                 score += 0.01 * max(0, case.year - 2000) / 25
             if profile.recency == "landmark" and "Supreme" in case.court:
                 score += 0.05
-            if profile.jurisdiction and any(j.lower() in case.court.lower() or
-                                            (j.upper() == "SC" and "Supreme" in case.court)
-                                            for j in profile.jurisdiction):
+            if profile.jurisdiction and any(
+                j.lower() in case.court.lower() or (j.upper() == "SC" and "Supreme" in case.court)
+                for j in profile.jurisdiction
+            ):
                 score += 0.05
         scored.append((chunk, round(score, 4)))
     scored.sort(key=lambda x: -x[1])

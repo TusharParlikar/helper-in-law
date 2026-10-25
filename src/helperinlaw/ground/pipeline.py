@@ -4,12 +4,12 @@ Failure policy (§4.5): drop failed claims; too many dropped -> extractive mode;
 -> abstain.
 """
 
+from typing import Literal
+
 from helperinlaw.core import ollama
 from helperinlaw.core.config import Settings
 from helperinlaw.core.logging import get_logger
 from helperinlaw.core.store import Store
-from typing import Literal
-
 from helperinlaw.core.types import (
     ClaimSet,
     Filters,
@@ -30,8 +30,9 @@ log = get_logger(__name__)
 Mode = Literal["synthesised", "extractive"]
 
 
-def retrieve(store: Store, cfg: Settings, question: str, filters: Filters | None,
-             profile: Profile) -> tuple[list[Source], bool]:
+def retrieve(
+    store: Store, cfg: Settings, question: str, filters: Filters | None, profile: Profile
+) -> tuple[list[Source], bool]:
     q = understand(question, filters)
     hits = search(store, q, rewrite(q), cfg.index_version, cfg.use_dense)
     ranked = rerank(store, q, hits, profile)
@@ -40,26 +41,35 @@ def retrieve(store: Store, cfg: Settings, question: str, filters: Filters | None
     return sources, ok
 
 
-def abstain(question: str, sources: list[Source], gaps: list[str], proposed: int = 0,
-            reasons: dict[str, int] | None = None) -> VerifiedClaimSet:
+def abstain(
+    question: str,
+    sources: list[Source],
+    gaps: list[str],
+    proposed: int = 0,
+    reasons: dict[str, int] | None = None,
+) -> VerifiedClaimSet:
     return VerifiedClaimSet(
-        question=question, gaps=gaps or ["Not found in the indexed judgments."],
+        question=question,
+        gaps=gaps or ["Not found in the indexed judgments."],
         nearest=list(dict.fromkeys(s.chunk.case_id for s in sources))[:3],
-        report=VerificationReport(claims_proposed=proposed, dropped=proposed, mode="abstained",
-                                  drop_reasons=reasons or {}),
+        report=VerificationReport(
+            claims_proposed=proposed, dropped=proposed, mode="abstained", drop_reasons=reasons or {}
+        ),
     )
 
 
-def answer_content(store: Store, cfg: Settings, question: str, filters: Filters | None,
-                   profile: Profile) -> VerifiedClaimSet:
+def answer_content(
+    store: Store, cfg: Settings, question: str, filters: Filters | None, profile: Profile
+) -> VerifiedClaimSet:
     sources, ok = retrieve(store, cfg, question, filters, profile)
     if not ok:
         return abstain(question, sources, ["Not found in the indexed judgments."])
     sources = [s for s in sources if s.score >= cfg.evidence_min_score * 0.6] or sources[:3]
 
     def run(cs: ClaimSet, rejected: int, mode: Mode) -> VerifiedClaimSet:
-        claims, report = verify(store, cs, sources, cfg.judge_model, cfg.llm_model,
-                                cfg.fuzzy_quote_ratio)
+        claims, report = verify(
+            store, cs, sources, cfg.judge_model, cfg.llm_model, cfg.fuzzy_quote_ratio
+        )
         report.claims_proposed += rejected
         report.dropped += rejected
         if rejected:
@@ -76,7 +86,12 @@ def answer_content(store: Store, cfg: Settings, question: str, filters: Filters 
         if result is not None and result.report.claims_proposed == 0:
             return abstain(question, sources, result.gaps)
         r = result.report if result else None
-        if result and r and r.claims_proposed and r.dropped / r.claims_proposed <= cfg.max_drop_ratio:
+        if (
+            result
+            and r
+            and r.claims_proposed
+            and r.dropped / r.claims_proposed <= cfg.max_drop_ratio
+        ):
             return result
     # G8: extractive fallback (or the configured mode when the LLM is off).
     llm_report = result.report if result else None
@@ -87,5 +102,7 @@ def answer_content(store: Store, cfg: Settings, question: str, filters: Filters 
         for k, v in llm_report.drop_reasons.items():
             ext.report.drop_reasons[f"llm_{k}"] = v
     if not ext.claims:
-        return abstain(question, sources, ext.gaps, ext.report.claims_proposed, ext.report.drop_reasons)
+        return abstain(
+            question, sources, ext.gaps, ext.report.claims_proposed, ext.report.drop_reasons
+        )
     return ext

@@ -7,12 +7,17 @@ ACT_NAMES = {
     "IPC": ["Indian Penal Code", "IPC", "I.P.C."],
     "BNS": ["Bharatiya Nyaya Sanhita, 2023", "Bharatiya Nyaya Sanhita", "BNS"],
     "CrPC": ["Code of Criminal Procedure", "Cr.P.C.", "CrPC", "Cr.PC"],
-    "BNSS": ["Bharatiya Nagarik Suraksha Sanhita, 2023", "Bharatiya Nagarik Suraksha Sanhita", "BNSS"],
+    "BNSS": [
+        "Bharatiya Nagarik Suraksha Sanhita, 2023",
+        "Bharatiya Nagarik Suraksha Sanhita",
+        "BNSS",
+    ],
     "IEA": ["Indian Evidence Act", "Evidence Act", "IEA"],
     "BSA": ["Bharatiya Sakshya Adhiniyam, 2023", "Bharatiya Sakshya Adhiniyam", "BSA"],
 }
-_ALT = sorted(((name, act) for act, names in ACT_NAMES.items() for name in names),
-              key=lambda x: -len(x[0]))
+_ALT = sorted(
+    ((name, act) for act, names in ACT_NAMES.items() for name in names), key=lambda x: -len(x[0])
+)
 _ACT_RX = "|".join(re.escape(n) for n, _ in _ALT)
 _NAME_TO_ACT = {n.lower(): a for n, a in _ALT}
 

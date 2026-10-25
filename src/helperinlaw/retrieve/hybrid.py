@@ -37,8 +37,11 @@ def dense(store: Store, index_version: str, text: str, limit: int) -> list[tuple
 def passes(case: Case, f: Filters, store: Store) -> bool:
     if f.case_id and case.id != f.case_id:
         return False
-    if f.court and short_court(case.court).lower() != f.court.lower() \
-            and case.court.lower() != f.court.lower():
+    if (
+        f.court
+        and short_court(case.court).lower() != f.court.lower()
+        and case.court.lower() != f.court.lower()
+    ):
         return False
     if f.year_from and case.year < f.year_from:
         return False
@@ -52,8 +55,9 @@ def passes(case: Case, f: Filters, store: Store) -> bool:
     return True
 
 
-def search(store: Store, q: Query, queries: list[str], index_version: str,
-           use_dense: bool, limit: int = 30) -> list[tuple[Chunk, float]]:
+def search(
+    store: Store, q: Query, queries: list[str], index_version: str, use_dense: bool, limit: int = 30
+) -> list[tuple[Chunk, float]]:
     rankings: list[list[str]] = []
     for text in queries:
         if match := fts_match(text):

@@ -51,12 +51,17 @@ def test_filters_restrict_results(store: Store, cfg: Settings) -> None:
     sources, _ = retrieve(store, cfg, "bail", Filters(court="Bombay HC"), Profile())
     assert sources and all(s.chunk.case_id == "fs_2021_shaikh" for s in sources)
     sources, _ = retrieve(store, cfg, "bail", Filters(year_to=2016), Profile())
-    assert all(s.chunk.case_id in {"fs_2015_mehta", "fs_2012_pillai", "fs_2016_verma"} for s in sources)
+    assert all(
+        s.chunk.case_id in {"fs_2015_mehta", "fs_2012_pillai", "fs_2016_verma"} for s in sources
+    )
 
 
 def test_evidence_gate(store: Store, cfg: Settings) -> None:
-    _, ok = retrieve(store, cfg, "What is the punishment for sedition under Section 124A IPC?",
-                     None, Profile())
+    _, ok = retrieve(
+        store, cfg, "What is the punishment for sedition under Section 124A IPC?", None, Profile()
+    )
     assert not ok
-    _, ok = retrieve(store, cfg, "grounds for refusing bail under Section 439 CrPC", None, Profile())
+    _, ok = retrieve(
+        store, cfg, "grounds for refusing bail under Section 439 CrPC", None, Profile()
+    )
     assert ok

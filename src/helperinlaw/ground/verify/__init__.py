@@ -30,9 +30,17 @@ def section_of(store: Store, case_id: str, para: int) -> str:
     return ps[0].section if ps else ""
 
 
-def check_claim(store: Store, claim_text: str, refs: list[tuple[str, str]],
-                by_id: dict[str, Source], allowed: set[str], claim_type: str,
-                judge_model: str, answer_model: str, fuzzy: float) -> tuple[str | None, list[VerifiedRef]]:
+def check_claim(
+    store: Store,
+    claim_text: str,
+    refs: list[tuple[str, str]],
+    by_id: dict[str, Source],
+    allowed: set[str],
+    claim_type: str,
+    judge_model: str,
+    answer_model: str,
+    fuzzy: float,
+) -> tuple[str | None, list[VerifiedRef]]:
     """Returns (drop reason or None, verified refs)."""
     if looks_injected(claim_text):
         return "injection", []
@@ -48,8 +56,10 @@ def check_claim(store: Store, claim_text: str, refs: list[tuple[str, str]],
         para = find_quote(quote, src.chunk.text, fuzzy)
         if para is None:
             return "quote_not_found", []
-        if claim_type in ("holding", "ratio") and \
-                section_of(store, src.chunk.case_id, para) in ROLE_BLOCKED:
+        if (
+            claim_type in ("holding", "ratio")
+            and section_of(store, src.chunk.case_id, para) in ROLE_BLOCKED
+        ):
             return "role_mismatch", []
         verified.append(VerifiedRef(case_id=src.chunk.case_id, para=para, quote=quote.strip()))
     quotes = [r.quote for r in verified]
@@ -60,8 +70,14 @@ def check_claim(store: Store, claim_text: str, refs: list[tuple[str, str]],
     return None, verified
 
 
-def verify(store: Store, cs: ClaimSet, sources: list[Source], judge_model: str = "",
-           answer_model: str = "", fuzzy: float = 0.97) -> tuple[list[VerifiedClaim], VerificationReport]:
+def verify(
+    store: Store,
+    cs: ClaimSet,
+    sources: list[Source],
+    judge_model: str = "",
+    answer_model: str = "",
+    fuzzy: float = 0.97,
+) -> tuple[list[VerifiedClaim], VerificationReport]:
     by_id = {s.id: s for s in sources}
     allowed = allowlist_for(store, sources)
     drops: Counter[str] = Counter()
@@ -74,8 +90,15 @@ def verify(store: Store, cs: ClaimSet, sources: list[Source], judge_model: str =
             continue
         seen.add(key)
         reason, refs = check_claim(
-            store, claim.text, [(r.source_id, r.quote) for r in claim.support], by_id, allowed,
-            claim.type, judge_model, answer_model, fuzzy,
+            store,
+            claim.text,
+            [(r.source_id, r.quote) for r in claim.support],
+            by_id,
+            allowed,
+            claim.type,
+            judge_model,
+            answer_model,
+            fuzzy,
         )
         if reason:
             drops[reason] += 1
@@ -83,8 +106,11 @@ def verify(store: Store, cs: ClaimSet, sources: list[Source], judge_model: str =
         out.append(VerifiedClaim(id=f"c{len(out) + 1}", claim=claim, refs=refs))
 
     report = VerificationReport(
-        claims_proposed=len(cs.claims), verified=len(out), dropped=len(cs.claims) - len(out),
-        drop_reasons=dict(drops), conflicts=conflicts(store, out),
+        claims_proposed=len(cs.claims),
+        verified=len(out),
+        dropped=len(cs.claims) - len(out),
+        drop_reasons=dict(drops),
+        conflicts=conflicts(store, out),
     )
     return out, report
 
@@ -101,7 +127,7 @@ def conflicts(store: Store, claims: list[VerifiedClaim]) -> list[str]:
                     if note not in notes:
                         notes.append(note)
     for i, a in enumerate(claims):
-        for b in claims[i + 1:]:
+        for b in claims[i + 1 :]:
             if {r.case_id for r in a.refs} == {r.case_id for r in b.refs}:
                 continue  # one judgment's own sentences aren't a conflict of authority
             ta, tb = content_terms(a.claim.text), content_terms(b.claim.text)
@@ -109,4 +135,3 @@ def conflicts(store: Store, claims: list[VerifiedClaim]) -> list[str]:
             if overlap >= 0.5 and negated(a.claim.text) != negated(b.claim.text):
                 notes.append(f"Claims {a.id} and {b.id} appear to conflict; read both sources.")
     return notes
-

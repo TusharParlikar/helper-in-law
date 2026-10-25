@@ -40,8 +40,9 @@ def ingest_file(store: Store, path: Path) -> str:
     case = parse_metadata(header, case_id=path.stem, sha=sha)
     if not case.title or not case.date:
         raise ValueError("missing title or date")
-    store.add_case(case, [Paragraph(case_id=case.id, n=n, text=t, section=label(t, n))
-                          for n, t in paras])
+    store.add_case(
+        case, [Paragraph(case_id=case.id, n=n, text=t, section=label(t, n)) for n, t in paras]
+    )
     store.add_statutes(case.id, extract_statutes(header + "\n" + "\n".join(t for _, t in paras)))
     return "ingested"
 

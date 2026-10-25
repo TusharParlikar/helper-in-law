@@ -35,12 +35,17 @@ SCHEMA: dict[str, Any] = {
                         "type": "array",
                         "items": {
                             "type": "object",
-                            "properties": {"source_id": {"type": "string"}, "quote": {"type": "string"}},
+                            "properties": {
+                                "source_id": {"type": "string"},
+                                "quote": {"type": "string"},
+                            },
                             "required": ["source_id", "quote"],
                         },
                     },
-                    "type": {"type": "string",
-                             "enum": ["holding", "ratio", "obiter", "fact", "statute", "procedural"]},
+                    "type": {
+                        "type": "string",
+                        "enum": ["holding", "ratio", "obiter", "fact", "statute", "procedural"],
+                    },
                     "stance": {"type": "string", "enum": ["supports", "contrary", "neutral"]},
                 },
                 "required": ["text", "support", "type", "stance"],
@@ -64,7 +69,9 @@ def render_sources(sources: list[Source]) -> str:
 
 def llm_claims(model: str, question: str, sources: list[Source]) -> tuple[ClaimSet, int]:
     """Returns (claims that passed schema validation, count rejected at parse time)."""
-    raw = ollama.chat_json(model, SYSTEM, f"{render_sources(sources)}\n\nQuestion: {question}", SCHEMA)
+    raw = ollama.chat_json(
+        model, SYSTEM, f"{render_sources(sources)}\n\nQuestion: {question}", SCHEMA
+    )
     claims, rejected = [], 0
     for item in raw.get("claims", [])[: MAX_CLAIMS * 2]:
         try:
@@ -72,7 +79,9 @@ def llm_claims(model: str, question: str, sources: list[Source]) -> tuple[ClaimS
         except ValidationError:
             rejected += 1
     gaps = [g for g in raw.get("gaps", []) if isinstance(g, str)]
-    return ClaimSet(claims=claims, abstain=bool(raw.get("abstain")) and not claims, gaps=gaps), rejected
+    return ClaimSet(
+        claims=claims, abstain=bool(raw.get("abstain")) and not claims, gaps=gaps
+    ), rejected
 
 
 def extractive_claims(store: Store, question: str, sources: list[Source]) -> ClaimSet:
@@ -81,8 +90,10 @@ def extractive_claims(store: Store, question: str, sources: list[Source]) -> Cla
     q = content_terms(question)
     scored: list[tuple[float, Claim]] = []
     for src in sources:
-        sections = {p.n: p.section for p in store.get_paragraphs(src.chunk.case_id,
-                                                                 src.chunk.para_from, src.chunk.para_to)}
+        sections = {
+            p.n: p.section
+            for p in store.get_paragraphs(src.chunk.case_id, src.chunk.para_from, src.chunk.para_to)
+        }
         for n, para in paragraphs_of(src.chunk.text):
             section = sections.get(n, "reasoning")
             if section in ("arguments", "issues"):
@@ -94,10 +105,20 @@ def extractive_claims(store: Store, question: str, sources: list[Source]) -> Cla
                     continue
                 score = (hit / max(1, len(q)) + 0.1 * src.score) * SECTION_WEIGHT.get(section, 1.0)
                 kind = SECTION_TYPE.get(section, "ratio")
-                scored.append((score, Claim(text=sent, type=kind,  # type: ignore[arg-type]
-                                            support=[SupportRef(source_id=src.id, quote=sent)])))
+                scored.append(
+                    (
+                        score,
+                        Claim(
+                            text=sent,
+                            type=kind,  # type: ignore[arg-type]
+                            support=[SupportRef(source_id=src.id, quote=sent)],
+                        ),
+                    )
+                )
     scored.sort(key=lambda x: -x[0])
     if not scored:
-        return ClaimSet(abstain=True, gaps=["No sentence in the retrieved judgments matches the question."])
+        return ClaimSet(
+            abstain=True, gaps=["No sentence in the retrieved judgments matches the question."]
+        )
     best = scored[0][0]
     return ClaimSet(claims=[c for s, c in scored[:MAX_CLAIMS] if s >= best * 0.5])

@@ -7,17 +7,23 @@ from pydantic import BaseModel
 from helperinlaw.core.types import Filters
 from helperinlaw.parse.statutes import ACT_NAMES, extract_statutes, normalise_act
 
-STOP = set("""a an and are as at be by can could did do does for from had has have how i if in
+STOP = set(
+    """a an and are as at be by can could did do does for from had has have how i if in
 into is it its may me must my of on or our shall should so than that the their them then there
 these this those to under upon was were what when where whether which who whom why will with
 would you your about any all also been being court courts case cases law held hold says said
-under section sections act""".split())
+under section sections act""".split()
+)
 
 SHORT_SECTION = re.compile(
-    r"\b(?:s\.?|sec\.?|section)?\s*(?P<s>\d+[A-Z]?)\s+(?P<act>" +
-    "|".join(re.escape(n) for names in ACT_NAMES.values() for n in names) + r")\b", re.I,
+    r"\b(?:s\.?|sec\.?|section)?\s*(?P<s>\d+[A-Z]?)\s+(?P<act>"
+    + "|".join(re.escape(n) for names in ACT_NAMES.values() for n in names)
+    + r")\b",
+    re.I,
 )
-CASE_NAME = re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+v(?:s)?\.?\s+([A-Z][\w.]*(?:\s+(?:of\s+)?[A-Z][\w.]*)*)")
+CASE_NAME = re.compile(
+    r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+v(?:s)?\.?\s+([A-Z][\w.]*(?:\s+(?:of\s+)?[A-Z][\w.]*)*)"
+)
 
 
 class Query(BaseModel):

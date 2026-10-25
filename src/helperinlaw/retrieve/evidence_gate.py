@@ -6,8 +6,9 @@ from helperinlaw.parse.statutes import aliases
 from helperinlaw.retrieve.understand import Query
 
 
-def enough_evidence(store: Store, q: Query, ranked: list[tuple[Chunk, float]],
-                    min_score: float, min_passages: int) -> bool:
+def enough_evidence(
+    store: Store, q: Query, ranked: list[tuple[Chunk, float]], min_score: float, min_passages: int
+) -> bool:
     strong = [c for c, s in ranked if s >= min_score]
     if len(strong) < min_passages:
         return False

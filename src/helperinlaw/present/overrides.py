@@ -7,14 +7,23 @@ import re
 from typing import Any
 
 RULES: list[tuple[re.Pattern[str], dict[str, Any]]] = [
-    (re.compile(r"\b(shorter|brief(ly)?|quick(ly)?|tl;?dr|in short|concise)\b", re.I), {"depth": "quick"}),
-    (re.compile(r"\b(in detail|detailed|deep(er)?|full analysis|elaborate)\b", re.I), {"depth": "deep"}),
+    (
+        re.compile(r"\b(shorter|brief(ly)?|quick(ly)?|tl;?dr|in short|concise)\b", re.I),
+        {"depth": "quick"},
+    ),
+    (
+        re.compile(r"\b(in detail|detailed|deep(er)?|full analysis|elaborate)\b", re.I),
+        {"depth": "deep"},
+    ),
     (re.compile(r"\b(as a |in a )?table\b", re.I), {"structure": "table"}),
     (re.compile(r"\bbullets?|bullet points\b", re.I), {"structure": "bullets"}),
     (re.compile(r"\bIRAC\b", re.I), {"structure": "irac"}),
     (re.compile(r"\b(memo|research memo)\b", re.I), {"structure": "memo"}),
     (re.compile(r"\b(paragraphs?|prose)\b", re.I), {"structure": "paragraphs"}),
-    (re.compile(r"\b(explain (it )?simply|plain (english|language)|simple terms)\b", re.I), {"tone": "plain"}),
+    (
+        re.compile(r"\b(explain (it )?simply|plain (english|language)|simple terms)\b", re.I),
+        {"tone": "plain"},
+    ),
     (re.compile(r"\b(like i'?m new|eli5|beginner)\b", re.I), {"tone": "new"}),
     (re.compile(r"\b(in hindi|hindi me(in)?)\b", re.I), {"answer_language": "hi"}),
     (re.compile(r"\b(newest|latest|recent) first\b", re.I), {"recency": "newest"}),

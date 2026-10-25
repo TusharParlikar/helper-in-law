@@ -12,8 +12,13 @@ def client(service: Service) -> TestClient:
 
 
 def test_ask(client: TestClient) -> None:
-    r = client.post("/ask", json={"question": "grounds for refusing bail under Section 439 CrPC",
-                                  "style": {"depth": "quick"}})
+    r = client.post(
+        "/ask",
+        json={
+            "question": "grounds for refusing bail under Section 439 CrPC",
+            "style": {"depth": "quick"},
+        },
+    )
     assert r.status_code == 200
     body = r.json()
     assert body["citations"] and body["verification"]["verified"] >= 1
@@ -33,9 +38,16 @@ def test_read_routes(client: TestClient) -> None:
     assert client.get("/cases/fs_2015_mehta/paragraphs/7").json()[0]["n"] == 7
     assert client.get("/cases/fs_2016_verma/citing").json()[0]["treatment"] == "overruled"
     assert client.get("/statutes/BNS/103").json()["cases"]
-    assert client.post("/search", json={"query": "dowry death"}).json()[0]["case_id"] == "fs_2018_desai"
-    assert client.post("/cases/fs_2021_shaikh/chat",
-                       json={"question": "Is anticipatory bail limited in time?"}).status_code == 200
+    assert (
+        client.post("/search", json={"query": "dowry death"}).json()[0]["case_id"]
+        == "fs_2018_desai"
+    )
+    assert (
+        client.post(
+            "/cases/fs_2021_shaikh/chat", json={"question": "Is anticipatory bail limited in time?"}
+        ).status_code
+        == 200
+    )
 
 
 def test_profile_and_feedback(client: TestClient) -> None:

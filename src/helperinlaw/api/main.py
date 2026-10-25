@@ -9,8 +9,11 @@ from pydantic import BaseModel, Field
 from helperinlaw.core.types import Filters, Profile, Response
 from helperinlaw.service import Service
 
-app = FastAPI(title="Helper in Law", version="0.1.0",
-              description="Citation-first research over Indian court judgments. Not legal advice.")
+app = FastAPI(
+    title="Helper in Law",
+    version="0.1.0",
+    description="Citation-first research over Indian court judgments. Not legal advice.",
+)
 _service: Service | None = None
 
 

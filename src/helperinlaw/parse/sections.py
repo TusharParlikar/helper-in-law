@@ -8,10 +8,18 @@ import re
 
 RULES = [
     ("arguments", re.compile(r"\b(learned counsel|contended|submitted|argued)\b", re.I)),
-    ("issues", re.compile(r"\b(the question|the issue|questions? that arises?|for determination)\b", re.I)),
-    ("holding", re.compile(
-        r"\b(we hold|it is held|appeal is (allowed|dismissed)|petition is (allowed|dismissed)"
-        r"|application is (allowed|dismissed)|overruled|reference is answered)\b", re.I)),
+    (
+        "issues",
+        re.compile(r"\b(the question|the issue|questions? that arises?|for determination)\b", re.I),
+    ),
+    (
+        "holding",
+        re.compile(
+            r"\b(we hold|it is held|appeal is (allowed|dismissed)|petition is (allowed|dismissed)"
+            r"|application is (allowed|dismissed)|overruled|reference is answered)\b",
+            re.I,
+        ),
+    ),
     ("facts", re.compile(r"\b(FIR|was arrested|was convicted|was married|was charged|facts)\b")),
 ]
 

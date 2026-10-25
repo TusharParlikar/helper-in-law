@@ -13,8 +13,14 @@ def update_profile(store: Store, profile_id: str, changes: dict[str, Any]) -> Pr
     if bad:
         raise ValueError(f"not a style setting: {sorted(bad)}")
     current = store.get_profile(profile_id)
-    merged = Profile.model_validate({**current.model_dump(), **changes,
-                                     "profile_id": profile_id, "version": current.version + 1})
+    merged = Profile.model_validate(
+        {
+            **current.model_dump(),
+            **changes,
+            "profile_id": profile_id,
+            "version": current.version + 1,
+        }
+    )
     store.put_profile(merged)
     return merged
 

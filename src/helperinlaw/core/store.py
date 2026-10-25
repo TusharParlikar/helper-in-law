@@ -77,14 +77,26 @@ class Store:
     # --- cases & paragraphs ---------------------------------------------
 
     def has_sha(self, sha: str) -> bool:
-        return self.db.execute("SELECT 1 FROM cases WHERE pdf_sha256=?", (sha,)).fetchone() is not None
+        return (
+            self.db.execute("SELECT 1 FROM cases WHERE pdf_sha256=?", (sha,)).fetchone() is not None
+        )
 
     def add_case(self, case: Case, paras: list[Paragraph]) -> None:
         with self.db:
             self.db.execute(
                 "INSERT OR REPLACE INTO cases VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (case.id, case.title, case.court, case.date, json.dumps(case.bench), case.case_no,
-                 case.citation, case.neutral_citation, case.url, case.pdf_sha256),
+                (
+                    case.id,
+                    case.title,
+                    case.court,
+                    case.date,
+                    json.dumps(case.bench),
+                    case.case_no,
+                    case.citation,
+                    case.neutral_citation,
+                    case.url,
+                    case.pdf_sha256,
+                ),
             )
             self.db.execute("DELETE FROM paragraphs WHERE case_id=?", (case.id,))
             self.db.executemany(
@@ -160,8 +172,10 @@ class Store:
             self.db.execute("DELETE FROM chunks_fts WHERE index_version=?", (index_version,))
             self.db.executemany(
                 "INSERT INTO chunks VALUES (?,?,?,?,?,?,?)",
-                [(c.id, index_version, c.case_id, c.para_from, c.para_to, c.text, c.prefix)
-                 for c in chunks],
+                [
+                    (c.id, index_version, c.case_id, c.para_from, c.para_to, c.text, c.prefix)
+                    for c in chunks
+                ],
             )
             self.db.executemany(
                 "INSERT INTO chunks_fts (text, chunk_id, index_version) VALUES (?,?,?)",
@@ -171,7 +185,8 @@ class Store:
     def get_chunk(self, index_version: str, chunk_id: str) -> Chunk | None:
         row = self.db.execute(
             "SELECT id, case_id, para_from, para_to, text, prefix FROM chunks "
-            "WHERE index_version=? AND id=?", (index_version, chunk_id)
+            "WHERE index_version=? AND id=?",
+            (index_version, chunk_id),
         ).fetchone()
         return Chunk(**dict(row)) if row else None
 
@@ -239,8 +254,16 @@ class Store:
             for table in ("user_profiles", "answers", "feedback"):
                 self.db.execute(f"DELETE FROM {table} WHERE profile_id=?", (profile_id,))
 
-    def save_answer(self, profile_id: str, question: str, filters: str, index_version: str,
-                    claim_set_json: str, mode: str, confidence: str) -> int:
+    def save_answer(
+        self,
+        profile_id: str,
+        question: str,
+        filters: str,
+        index_version: str,
+        claim_set_json: str,
+        mode: str,
+        confidence: str,
+    ) -> int:
         with self.db:
             cur = self.db.execute(
                 "INSERT INTO answers (profile_id, question, filters, index_version, claim_set_json,"

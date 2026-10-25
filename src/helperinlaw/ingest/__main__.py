@@ -15,5 +15,8 @@ ap.add_argument("folder", nargs="?", default="data/sample")
 ap.add_argument("--limit", type=int)
 args = ap.parse_args()
 r = ingest_dir(Store(settings.db_path), Path(args.folder), args.limit)
-print(json.dumps({"ingested": len(r.ingested), "skipped": len(r.skipped), "failed": r.failed},
-                 indent=2))
+print(
+    json.dumps(
+        {"ingested": len(r.ingested), "skipped": len(r.skipped), "failed": r.failed}, indent=2
+    )
+)

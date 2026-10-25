@@ -17,10 +17,16 @@ def chunk_case(case: Case, paras: list[Paragraph], max_words: int = MAX_WORDS) -
     def flush() -> None:
         if group:
             a, b = group[0].n, group[-1].n
-            chunks.append(Chunk(
-                id=f"{case.id}:{a}-{b}", case_id=case.id, para_from=a, para_to=b,
-                text="\n".join(f"[{p.n}] {p.text}" for p in group), prefix=prefix(case, a, b),
-            ))
+            chunks.append(
+                Chunk(
+                    id=f"{case.id}:{a}-{b}",
+                    case_id=case.id,
+                    para_from=a,
+                    para_to=b,
+                    text="\n".join(f"[{p.n}] {p.text}" for p in group),
+                    prefix=prefix(case, a, b),
+                )
+            )
             group.clear()
 
     words = 0

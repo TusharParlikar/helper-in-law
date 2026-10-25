@@ -35,7 +35,11 @@ def parse_metadata(header: str, case_id: str, sha: str = "") -> Case:
         return m.group(key).strip() if m else ""
 
     court = grab(COURT, "c")
-    court = "Supreme Court of India" if court.upper().startswith("SUPREME") else court.title().replace(" Of ", " of ")
+    court = (
+        "Supreme Court of India"
+        if court.upper().startswith("SUPREME")
+        else court.title().replace(" Of ", " of ")
+    )
     date = grab(DATE, "d")
     cit_line = grab(CITATION_LINE, "c")
     reporter = REPORTER.search(cit_line)

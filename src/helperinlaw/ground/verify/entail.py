@@ -15,14 +15,19 @@ from helperinlaw.ground.text import content_terms, polarity_ok, stem
 Verdict = Literal["supported", "partially", "unsupported"]
 
 # Words that flip a legal outcome. A claim may not introduce one the quote doesn't contain.
-CRITICAL = {stem(t) for t in """allowed dismissed granted refused rejected upheld affirmed reversed
+CRITICAL = {
+    stem(t)
+    for t in """allowed dismissed granted refused rejected upheld affirmed reversed
 quashed acquitted convicted guilty innocent mandatory optional directory permissible prohibited
 valid invalid void overruled followed distinguished murder culpable bailable cognizable always
-never shall must may only life death""".split()}
+never shall must may only life death""".split()
+}
 
 JUDGE_SCHEMA = {
     "type": "object",
-    "properties": {"verdict": {"type": "string", "enum": ["supported", "partially", "unsupported"]}},
+    "properties": {
+        "verdict": {"type": "string", "enum": ["supported", "partially", "unsupported"]}
+    },
     "required": ["verdict"],
 }
 JUDGE_SYSTEM = (
@@ -52,8 +57,9 @@ def judge(claim: str, quote: str, judge_model: str, answer_model: str) -> Verdic
     if not polarity_ok(claim, quote):
         return "unsupported"  # deterministic guard holds even with an LLM judge
     try:
-        out = ollama.chat_json(judge_model, JUDGE_SYSTEM,
-                               f"QUOTE:\n<<<{quote}>>>\n\nCLAIM:\n{claim}", JUDGE_SCHEMA)
+        out = ollama.chat_json(
+            judge_model, JUDGE_SYSTEM, f"QUOTE:\n<<<{quote}>>>\n\nCLAIM:\n{claim}", JUDGE_SCHEMA
+        )
     except ollama.OllamaError:
         return lexical
     v = out.get("verdict")

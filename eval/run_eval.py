@@ -34,11 +34,17 @@ from helperinlaw.service import Service  # noqa: E402
 
 DATA = ROOT / "eval" / "datasets"
 TARGETS = {
-    "recall@10": (">=", 0.85), "mrr": (">=", 0.60), "unsupported_claims_displayed": ("==", 0),
-    "citation_accuracy": (">=", 0.99), "responses_lacking_citations": ("==", 0),
-    "abstain_correctness": (">=", 0.90), "false_premise_rejection": (">=", 0.90),
-    "injection_pass_rate": ("==", 1.0), "style_invariance": ("==", 1.0),
-    "p95_ask_latency_s": ("<=", 10.0), "parser_accuracy": (">=", 0.95),
+    "recall@10": (">=", 0.85),
+    "mrr": (">=", 0.60),
+    "unsupported_claims_displayed": ("==", 0),
+    "citation_accuracy": (">=", 0.99),
+    "responses_lacking_citations": ("==", 0),
+    "abstain_correctness": (">=", 0.90),
+    "false_premise_rejection": (">=", 0.90),
+    "injection_pass_rate": ("==", 1.0),
+    "style_invariance": ("==", 1.0),
+    "p95_ask_latency_s": ("<=", 10.0),
+    "parser_accuracy": (">=", 0.95),
 }
 
 
@@ -48,8 +54,14 @@ def load(name: str) -> list[dict[str, Any]]:
 
 def strip_frame(text: str) -> str:
     text = text.removeprefix("- ")
-    for word in ("Rule: ", "Application: ", "Conclusion: ", "Holdings: ", "Reasoning: ",
-                 "Facts and procedure: "):
+    for word in (
+        "Rule: ",
+        "Application: ",
+        "Conclusion: ",
+        "Holdings: ",
+        "Reasoning: ",
+        "Facts and procedure: ",
+    ):
         text = text.removeprefix(word)
     for lead in LEAD.values():
         if lead:
@@ -70,18 +82,29 @@ def audit(svc: Service, r: Response) -> tuple[int, int, int]:
     for b in r.answer_blocks:
         quotes = [cites[i].quote for i in b.citation_ids if i in cites]
         claim = strip_frame(b.text)
-        if not quotes or entities_supported(claim, quotes) or \
-                lexical_verdict(claim, " ".join(quotes)) != "supported":
+        if (
+            not quotes
+            or entities_supported(claim, quotes)
+            or lexical_verdict(claim, " ".join(quotes)) != "supported"
+        ):
             unsupported += 1
     return unsupported, len(r.citations), bad_cites
 
 
-def retrieval_metrics(store: Store, cfg: Settings, rows: list[dict[str, Any]], use_rewrite: bool,
-                      use_rerank: bool, dense: bool) -> dict[str, float]:
+def retrieval_metrics(
+    store: Store,
+    cfg: Settings,
+    rows: list[dict[str, Any]],
+    use_rewrite: bool,
+    use_rerank: bool,
+    dense: bool,
+) -> dict[str, float]:
     recall, rr = [], []
     for row in rows:
         q = understand(row["question"], Filters(**row.get("filters", {})))
-        hits = search(store, q, rewrite(q) if use_rewrite else [q.text], cfg.index_version, dense, 30)
+        hits = search(
+            store, q, rewrite(q) if use_rewrite else [q.text], cfg.index_version, dense, 30
+        )
         if use_rerank:
             hits = rerank(store, q, hits, Profile(), top=30)
         cases = list(dict.fromkeys(c.case_id for c, _ in hits))[:10]
@@ -116,7 +139,15 @@ def main() -> None:
     m.update(list(ablation.values())[-1])
 
     # Answers: grounding audit over answerable + adversarial sets.
-    latencies, unsupported, n_cites, bad_cites, lacking, verified_sum, proposed_sum = [], 0, 0, 0, 0, 0, 0
+    latencies, unsupported, n_cites, bad_cites, lacking, verified_sum, proposed_sum = (
+        [],
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    )
     answered = load("retrieval") + load("adversarial")
     responses = []
     for row in answered:
@@ -132,19 +163,26 @@ def main() -> None:
     m["unsupported_claims_displayed"] = unsupported
     m["citation_accuracy"] = round(1 - bad_cites / n_cites, 4) if n_cites else 1.0
     m["responses_lacking_citations"] = lacking
-    m["answer_rate"] = round(sum(r.confidence != "not_found" for _, r in responses[:len(rows)]) / len(rows), 3)
+    m["answer_rate"] = round(
+        sum(r.confidence != "not_found" for _, r in responses[: len(rows)]) / len(rows), 3
+    )
     m["verification_keep_rate"] = round(verified_sum / proposed_sum, 3) if proposed_sum else 1.0
 
     # Abstain on unanswerables.
     un = load("unanswerable")
-    m["abstain_correctness"] = round(sum(svc.ask(x["question"]).confidence == "not_found" for x in un) / len(un), 3)
+    m["abstain_correctness"] = round(
+        sum(svc.ask(x["question"]).confidence == "not_found" for x in un) / len(un), 3
+    )
 
     # False premises: no displayed block may support the false statement.
     fp = load("false_premise")
     ok = 0
     for x in fp:
         r = svc.ask(x["question"])
-        ok += not any(lexical_verdict(x["premise"], strip_frame(b.text)) == "supported" for b in r.answer_blocks)
+        ok += not any(
+            lexical_verdict(x["premise"], strip_frame(b.text)) == "supported"
+            for b in r.answer_blocks
+        )
     m["false_premise_rejection"] = round(ok / len(fp), 3)
 
     # Injection: every adversarial response stays cited, carries the disclaimer, no payload.
@@ -162,8 +200,12 @@ def main() -> None:
     m["injection_pass_rate"] = round(passed / len(adv), 3)
 
     # Style invariance: 10 questions x 8 profiles -> identical verified claim sets.
-    styles = [dict(depth=d, structure=s, tone=t) for d, s, t in itertools.product(
-        ["quick", "deep"], ["bullets", "irac"], ["technical", "plain"])]
+    styles = [
+        dict(depth=d, structure=s, tone=t)
+        for d, s, t in itertools.product(
+            ["quick", "deep"], ["bullets", "irac"], ["technical", "plain"]
+        )
+    ]
     inv = 0
     for row in rows[:10]:
         sets = set()
@@ -176,33 +218,62 @@ def main() -> None:
     m["p95_ask_latency_s"] = round(statistics.quantiles(latencies, n=20)[18], 3)
 
     gold = load("gold_parse")
-    m["parser_accuracy"] = round(sum(
-        (c := store.get_case(g["case_id"])) is not None and (c.title, c.date, c.bench) == (g["title"], g["date"], g["bench"])
-        and len(store.get_paragraphs(c.id)) == g["paragraphs"] for g in gold) / len(gold), 3)
+    m["parser_accuracy"] = round(
+        sum(
+            (c := store.get_case(g["case_id"])) is not None
+            and (c.title, c.date, c.bench) == (g["title"], g["date"], g["bench"])
+            and len(store.get_paragraphs(c.id)) == g["paragraphs"]
+            for g in gold
+        )
+        / len(gold),
+        3,
+    )
 
     def passes(k: str) -> bool:
         op, target = TARGETS[k]
         v = m[k]
         return v >= target if op == ">=" else v <= target if op == "<=" else v == target
 
-    sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True,
-                         cwd=ROOT).stdout.strip()
+    sha = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, cwd=ROOT
+    ).stdout.strip()
     mode = f"{'llm=' + cfg.llm_model if args.llm else 'extractive'}, {'dense' if args.dense else 'bm25'}"
-    lines = [f"# Phase 1 evaluation report", "", f"- Commit: `{sha}`", f"- Mode: {mode}",
-             f"- Corpus: {cfg.corpus_name}", "", "## Exit criteria (§7)", "",
-             "| Metric | Value | Target | Pass |", "|---|---|---|---|"]
+    lines = [
+        "# Phase 1 evaluation report",
+        "",
+        f"- Commit: `{sha}`",
+        f"- Mode: {mode}",
+        f"- Corpus: {cfg.corpus_name}",
+        "",
+        "## Exit criteria (§7)",
+        "",
+        "| Metric | Value | Target | Pass |",
+        "|---|---|---|---|",
+    ]
     for k, (op, target) in TARGETS.items():
         lines.append(f"| {k} | {m[k]} | {op} {target} | {'✅' if passes(k) else '❌'} |")
-    lines += ["", f"Also: answer rate {m['answer_rate']}, verification keep rate "
-              f"{m['verification_keep_rate']}.", "", "## Retrieval ablation", "",
-              "| Pipeline | Recall@10 | MRR |", "|---|---|---|"]
+    lines += [
+        "",
+        f"Also: answer rate {m['answer_rate']}, verification keep rate "
+        f"{m['verification_keep_rate']}.",
+        "",
+        "## Retrieval ablation",
+        "",
+        "| Pipeline | Recall@10 | MRR |",
+        "|---|---|---|",
+    ]
     lines += [f"| {k} | {v['recall@10']} | {v['mrr']} |" for k, v in ablation.items()]
     n = len(answered)
-    lines += ["", "## Reading the zero", "",
-              f"0 unsupported claims in {n} responses: by the rule of three the 95% upper bound "
-              f"on the per-response failure rate is about {3 / n:.1%}. Phase 3 widens the sample.",
-              "", "The sample corpus is 8 fictional judgments; these numbers prove the pipeline "
-              "and its gates, not quality on real judgments."]
+    lines += [
+        "",
+        "## Reading the zero",
+        "",
+        f"0 unsupported claims in {n} responses: by the rule of three the 95% upper bound "
+        f"on the per-response failure rate is about {3 / n:.1%}. Phase 3 widens the sample.",
+        "",
+        "The sample corpus is 8 fictional judgments; these numbers prove the pipeline "
+        "and its gates, not quality on real judgments.",
+    ]
     report = "\n".join(lines) + "\n"
     out = ROOT / "eval" / "reports"
     out.mkdir(exist_ok=True)

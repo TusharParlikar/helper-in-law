@@ -30,6 +30,9 @@ def fuzzy_match(qw: list[str], pw: list[str], ratio: float) -> bool:
         win = pw[i : i + len(qw)]
         if SequenceMatcher(None, " ".join(qw), " ".join(win), autojunk=False).ratio() < ratio:
             continue
-        if all(a == b or SequenceMatcher(None, a, b).ratio() >= 0.75 for a, b in zip(qw, win, strict=True)):
+        if all(
+            a == b or SequenceMatcher(None, a, b).ratio() >= 0.75
+            for a, b in zip(qw, win, strict=True)
+        ):
             return True
     return False

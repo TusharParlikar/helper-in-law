@@ -9,13 +9,22 @@ from helperinlaw.core.types import Claim, Source, SupportRef
 Fault = Callable[[Claim, list[Source], list[Claim]], Claim | None]
 
 
-def _with(claim: Claim, text: str | None = None, quote: str | None = None,
-          source_id: str | None = None, type_: str | None = None) -> Claim:
+def _with(
+    claim: Claim,
+    text: str | None = None,
+    quote: str | None = None,
+    source_id: str | None = None,
+    type_: str | None = None,
+) -> Claim:
     ref = claim.support[0]
     return Claim(
         text=text if text is not None else claim.text,
-        support=[SupportRef(source_id=source_id or ref.source_id,
-                            quote=quote if quote is not None else ref.quote)],
+        support=[
+            SupportRef(
+                source_id=source_id or ref.source_id,
+                quote=quote if quote is not None else ref.quote,
+            )
+        ],
         type=type_ or claim.type,  # type: ignore[arg-type]
         stance=claim.stance,
     )
@@ -33,13 +42,19 @@ def alter_number(c: Claim, s: list[Source], o: list[Claim]) -> Claim | None:
     m = re.search(r"\d+", c.text)
     if not m:
         return None
-    return _with(c, text=c.text[: m.start()] + str(int(m.group(0)) + 2) + c.text[m.end():])
+    return _with(c, text=c.text[: m.start()] + str(int(m.group(0)) + 2) + c.text[m.end() :])
 
 
 def invert_meaning(c: Claim, s: list[Source], o: list[Claim]) -> Claim | None:
-    for a, b in ((" shall not ", " shall "), (" is not ", " is "), (" cannot ", " can "),
-                 (" shall ", " shall not "), (" must ", " must not "), (" may ", " may not "),
-                 (" is ", " is not ")):
+    for a, b in (
+        (" shall not ", " shall "),
+        (" is not ", " is "),
+        (" cannot ", " can "),
+        (" shall ", " shall not "),
+        (" must ", " must not "),
+        (" may ", " may not "),
+        (" is ", " is not "),
+    ):
         if a in c.text:
             return _with(c, text=c.text.replace(a, b, 1))
     return None
@@ -80,8 +95,9 @@ def argument_as_holding(c: Claim, s: list[Source], o: list[Claim]) -> Claim | No
         for line in src.chunk.text.split("\n"):
             if "Learned counsel" in line:
                 sent = re.sub(r"^\[\d+\]\s*", "", line).split(". ")[0].rstrip(".") + "."
-                return Claim(text=sent, type="holding",
-                             support=[SupportRef(source_id=src.id, quote=sent)])
+                return Claim(
+                    text=sent, type="holding", support=[SupportRef(source_id=src.id, quote=sent)]
+                )
     return None
 
 

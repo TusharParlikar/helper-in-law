@@ -7,8 +7,10 @@ from helperinlaw.ingest.pipeline import ingest_dir
 
 
 def test_cleaner_drops_page_numbers_and_running_headers() -> None:
-    text = "HEADER LINE\n1. First para con-\ntinues here.\nPage 1 of 3\nHEADER LINE\n" \
-           "2. Second.\n- 2 -\nHEADER LINE\n"
+    text = (
+        "HEADER LINE\n1. First para con-\ntinues here.\nPage 1 of 3\nHEADER LINE\n"
+        "2. Second.\n- 2 -\nHEADER LINE\n"
+    )
     out = clean(text)
     assert "Page 1" not in out and "HEADER LINE" not in out and "- 2 -" not in out
     assert "continues here" in out

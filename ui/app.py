@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from helperinlaw.core.types import Filters, Profile
+from helperinlaw.core.types import Filters
 from helperinlaw.service import Service
 
 st.set_page_config(page_title="Helper in Law", layout="wide")
@@ -21,15 +21,24 @@ with st.sidebar:
     st.header("How do you like your answers?")
     p = svc.get_profile()
     changes = {
-        "depth": st.selectbox("Depth", ["quick", "standard", "deep"],
-                              index=["quick", "standard", "deep"].index(p.depth)),
-        "structure": st.selectbox("Structure", ["bullets", "paragraphs", "irac", "memo", "table"],
-                                  index=["bullets", "paragraphs", "irac", "memo", "table"].index(p.structure)),
-        "tone": st.selectbox("Tone", ["technical", "plain", "new"],
-                             index=["technical", "plain", "new"].index(p.tone)),
+        "depth": st.selectbox(
+            "Depth",
+            ["quick", "standard", "deep"],
+            index=["quick", "standard", "deep"].index(p.depth),
+        ),
+        "structure": st.selectbox(
+            "Structure",
+            ["bullets", "paragraphs", "irac", "memo", "table"],
+            index=["bullets", "paragraphs", "irac", "memo", "table"].index(p.structure),
+        ),
+        "tone": st.selectbox(
+            "Tone", ["technical", "plain", "new"], index=["technical", "plain", "new"].index(p.tone)
+        ),
         "citation_style": st.selectbox(
-            "Citation style", ["case_name", "neutral", "inline_para", "footnotes"],
-            index=["case_name", "neutral", "inline_para", "footnotes"].index(p.citation_style)),
+            "Citation style",
+            ["case_name", "neutral", "inline_para", "footnotes"],
+            index=["case_name", "neutral", "inline_para", "footnotes"].index(p.citation_style),
+        ),
         "history_opt_in": st.checkbox("Save my history", value=p.history_opt_in),
     }
     if st.button("Save settings"):
@@ -44,8 +53,10 @@ if q:
     r = svc.ask(q, Filters(court=court, year_from=year_from))
     v = r.verification
     badge = {"high": "🟢", "medium": "🟡", "low": "🟠", "not_found": "⚪"}[r.confidence]
-    st.markdown(f"{badge} **Confidence: {r.confidence}** · verified {v.verified}/{v.claims_proposed}"
-                f" claims · mode: {v.mode}")
+    st.markdown(
+        f"{badge} **Confidence: {r.confidence}** · verified {v.verified}/{v.claims_proposed}"
+        f" claims · mode: {v.mode}"
+    )
     for n in r.notices:
         st.info(n)
     if r.confidence == "not_found":

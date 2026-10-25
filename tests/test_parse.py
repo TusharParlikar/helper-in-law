@@ -10,17 +10,25 @@ GOLD = Path(__file__).parent.parent / "eval" / "datasets" / "gold_parse.jsonl"
 
 
 def test_paragraphs_only_accept_increasing_numbers() -> None:
-    header, paras = split_paragraphs("Title\n\n1. One. It cost Rs.\n2. 000 more.\n2. Two.\n3. Three.")
+    header, paras = split_paragraphs(
+        "Title\n\n1. One. It cost Rs.\n2. 000 more.\n2. Two.\n3. Three."
+    )
     assert header == "Title"
     assert [n for n, _ in paras] == [1, 2, 3]
 
 
 def test_statute_extraction_variants() -> None:
-    text = ("Section 302 IPC; Section 439 of the Code of Criminal Procedure; "
-            "Section 65B(4) of the Indian Evidence Act; Section 103 of the Bharatiya Nyaya Sanhita, "
-            "2023; Section 304 Part I IPC; Article 21 of the Constitution")
+    text = (
+        "Section 302 IPC; Section 439 of the Code of Criminal Procedure; "
+        "Section 65B(4) of the Indian Evidence Act; Section 103 of the Bharatiya Nyaya Sanhita, "
+        "2023; Section 304 Part I IPC; Article 21 of the Constitution"
+    )
     assert set(extract_statutes(text)) == {
-        ("IPC", "302"), ("CrPC", "439"), ("IEA", "65B"), ("BNS", "103"), ("IPC", "304"),
+        ("IPC", "302"),
+        ("CrPC", "439"),
+        ("IEA", "65B"),
+        ("BNS", "103"),
+        ("IPC", "304"),
         ("CONST", "21"),
     }
 
@@ -53,5 +61,6 @@ def test_gold_parse_accuracy(store: Store) -> None:
 
 def test_citation_graph(store: Store) -> None:
     assert store.citing_cases("fs_2016_verma") == [
-        {"citing_id": "fs_2020_joshi", "treatment": "overruled", "para": 6}]
+        {"citing_id": "fs_2020_joshi", "treatment": "overruled", "para": 6}
+    ]
     assert store.citing_cases("fs_2015_mehta")[0]["treatment"] == "followed"
