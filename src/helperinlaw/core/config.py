@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     use_dense: bool = True
     index_version: str = "v1"
 
-    evidence_min_score: float = 0.35
+    evidence_min_score: float = 0.5
     evidence_min_passages: int = 1
     max_drop_ratio: float = 0.5  # above this, fall back to extractive mode (G8)
     fuzzy_quote_ratio: float = 0.97
