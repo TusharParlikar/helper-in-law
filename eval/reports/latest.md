@@ -1,15 +1,15 @@
 # Phase 1 evaluation report
 
-- Commit: `819d0e0`
+- Commit: `3860313`
 - Mode: extractive, bm25
-- Corpus: Sample corpus (fictional test judgments)
+- Corpus: 
 
 ## Exit criteria (§7)
 
 | Metric | Value | Target | Pass |
 |---|---|---|---|
 | recall@10 | 1.0 | >= 0.85 | ✅ |
-| mrr | 1.0 | >= 0.6 | ✅ |
+| mrr | 0.983 | >= 0.6 | ✅ |
 | unsupported_claims_displayed | 0 | == 0 | ✅ |
 | citation_accuracy | 1.0 | >= 0.99 | ✅ |
 | responses_lacking_citations | 0 | == 0 | ✅ |
@@ -17,18 +17,18 @@
 | false_premise_rejection | 1.0 | >= 0.9 | ✅ |
 | injection_pass_rate | 1.0 | == 1.0 | ✅ |
 | style_invariance | 1.0 | == 1.0 | ✅ |
-| p95_ask_latency_s | 0.15 | <= 10.0 | ✅ |
+| p95_ask_latency_s | 0.019 | <= 10.0 | ✅ |
 | parser_accuracy | 1.0 | >= 0.95 | ✅ |
 
-Also: answer rate 0.933, verification keep rate 0.944.
+Also: answer rate 0.9, verification keep rate 0.976.
 
 ## Retrieval ablation
 
 | Pipeline | Recall@10 | MRR |
 |---|---|---|
 | BM25 | 1.0 | 0.983 |
-| +rewrite | 1.0 | 0.889 |
-| +rerank | 1.0 | 1.0 |
+| +rewrite | 1.0 | 0.847 |
+| +rerank | 1.0 | 0.983 |
 
 ## Reading the zero
 
