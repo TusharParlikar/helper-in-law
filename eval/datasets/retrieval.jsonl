@@ -1,0 +1,30 @@
+{"question": "What are the grounds for refusing bail under Section 439 CrPC?", "relevant": ["fs_2015_mehta"]}
+{"question": "Can bail be refused on mere apprehension of witness tampering without material?", "relevant": ["fs_2015_mehta", "fs_2021_shaikh"]}
+{"question": "Is bail the rule and jail the exception?", "relevant": ["fs_2015_mehta"]}
+{"question": "What factors govern the grant of bail to an accused in custody for cheating investors?", "relevant": ["fs_2015_mehta"]}
+{"question": "Does personal liberty under Article 21 affect bail decisions?", "relevant": ["fs_2015_mehta"]}
+{"question": "What must the prosecution prove for dowry death under Section 304B IPC?", "relevant": ["fs_2018_desai"]}
+{"question": "What does soon before her death mean in dowry death cases?", "relevant": ["fs_2018_desai"]}
+{"question": "When does the presumption under Section 113B of the Evidence Act arise?", "relevant": ["fs_2018_desai"]}
+{"question": "Is the presumption of dowry death rebuttable?", "relevant": ["fs_2018_desai"]}
+{"question": "When is murder reduced to culpable homicide under Exception 4 to Section 300 IPC?", "relevant": ["fs_2012_pillai"]}
+{"question": "Does a single blow in a sudden quarrel show absence of premeditation?", "relevant": ["fs_2012_pillai"]}
+{"question": "Conviction altered from Section 302 to Section 304 Part I IPC sudden fight", "relevant": ["fs_2012_pillai"]}
+{"question": "Is a certificate under Section 65B(4) mandatory for electronic records?", "relevant": ["fs_2020_joshi", "fs_2016_verma"]}
+{"question": "Can the 65B certificate be dispensed with when the party does not possess the device?", "relevant": ["fs_2016_verma", "fs_2020_joshi"]}
+{"question": "Is a 65B certificate needed when the original device is produced as primary evidence?", "relevant": ["fs_2020_joshi"]}
+{"question": "Which decision on electronic evidence certificates was overruled?", "relevant": ["fs_2020_joshi", "fs_2016_verma"]}
+{"question": "Admissibility of call detail records without a certificate", "relevant": ["fs_2016_verma", "fs_2020_joshi"]}
+{"question": "Must anticipatory bail under Section 438 CrPC be limited to a fixed period?", "relevant": ["fs_2021_shaikh"]}
+{"question": "What conditions can a court impose while granting anticipatory bail?", "relevant": ["fs_2021_shaikh"]}
+{"question": "Can protection under Section 438 continue till the end of trial?", "relevant": ["fs_2021_shaikh"]}
+{"question": "Is a wife who is qualified but not earning entitled to maintenance under Section 125 CrPC?", "relevant": ["fs_2023_iyer"]}
+{"question": "What is the purpose of maintenance under Section 125 CrPC?", "relevant": ["fs_2023_iyer"]}
+{"question": "Can maintenance be denied because the wife is capable of earning?", "relevant": ["fs_2023_iyer"]}
+{"question": "Which law applies to an offence committed before 1 July 2024?", "relevant": ["fs_2024_rao"]}
+{"question": "What IPC section corresponds to Section 103 of the Bharatiya Nyaya Sanhita?", "relevant": ["fs_2024_rao"]}
+{"question": "Can a person be charged under the BNS for acts done before it came into force?", "relevant": ["fs_2024_rao"]}
+{"question": "murder cases under Section 302 IPC", "relevant": ["fs_2012_pillai", "fs_2024_rao"]}
+{"question": "Supreme Court cases on bail", "relevant": ["fs_2015_mehta"], "filters": {"court": "SC"}}
+{"question": "Bombay High Court anticipatory bail", "relevant": ["fs_2021_shaikh"]}
+{"question": "electronic evidence judgments after 2018", "relevant": ["fs_2020_joshi"]}
