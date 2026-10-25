@@ -12,7 +12,10 @@ STOP = set(
 into is it its may me must my of on or our shall should so than that the their them then there
 these this those to under upon was were what when where whether which who whom why will with
 would you your about any all also been being court courts case cases law held hold says said
-under section sections act""".split()
+under section sections act
+client clients my mine he she him her his hers they them their someone person mr mrs ms
+day days night nights week weeks month months year years one two three four got get gets
+want wants wanted asked ask also just even still like""".split()
 )
 
 SHORT_SECTION = re.compile(
