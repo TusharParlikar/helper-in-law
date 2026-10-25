@@ -4,6 +4,7 @@
 
 ![status](https://img.shields.io/badge/status-Phase%201%20in%20development-orange)
 ![python](https://img.shields.io/badge/python-3.12-blue)
+![llm](https://img.shields.io/badge/LLM-Ollama%20(local)-black)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
 > ⚠️ **Not legal advice.** This is a research aid. Always read the cited judgment and verify the current state of the law.
@@ -127,16 +128,18 @@ REST, MCP and the UI all call one function layer (`service.py`). No business log
 
 Phase 1 checklist:
 
-- [ ] M1 Foundations (repo, Docker Compose, CI basics)
-- [ ] M2 Ingestion
-- [ ] M3 Parsing and structure
-- [ ] M4 Indexing
-- [ ] M5 Retrieval
-- [ ] M6 Grounded generation and verification
-- [ ] M7 Adaptive presentation
-- [ ] M8 API + UI
-- [ ] M9 MCP server
-- [ ] M10 Hardening and evaluation report
+- [x] M1 Foundations (uv, ruff, mypy, pytest, pre-commit, Makefile, CI, licence log)
+- [x] M2 Ingestion (quality gate, cleaner, idempotent, dead-letter queue)
+- [x] M3 Parsing and structure (metadata, paragraphs, sections, statutes + aliases, citation treatment)
+- [x] M4 Indexing (paragraph-bounded chunks, FTS5, Ollama embeddings, versioned)
+- [x] M5 Retrieval (understand, alias rewrite, hybrid RRF, rerank, evidence gate)
+- [x] M6 Grounded generation and verification (claims by source id, verification suite, extractive fallback)
+- [x] M7 Adaptive presentation (profiles, overrides, presenter, final guard, translation)
+- [x] M8 API + UI
+- [x] M9 MCP server (stdio + Streamable HTTP, localhost)
+- [x] M10 Tests, fault injection, evaluation report ([`eval/reports/latest.md`](eval/reports/latest.md))
+
+Phase 1 runs on a **fictional sample corpus** (`data/sample/`, 8 judgments written for testing). Swapping in a real corpus needs a licensed source; see [`docs/licence-log.md`](docs/licence-log.md). Deliberate Phase 1 substitutions (SQLite for Postgres/Qdrant, Ollama for hosted models) are listed in [`docs/architecture.md`](docs/architecture.md).
 
 Full plan: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
@@ -146,36 +149,34 @@ Full plan: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Quick start
 
-> The commands below describe the intended Phase 1 layout. They will work as milestones land; the checklist above shows what exists today.
-
-**Prerequisites:** Python 3.12, [`uv`](https://docs.astral.sh/uv/), Docker, an Anthropic API key. A GPU is strongly recommended for bulk embedding and reranking.
+**Prerequisites:** Python 3.12, [`uv`](https://docs.astral.sh/uv/), [Ollama](https://ollama.com) running locally. No Docker needed in Phase 1.
 
 ```bash
 # 1. Clone
-git clone https://github.com/<your-username>/helper-in-law.git
+git clone https://github.com/TusharParlikar/helper-in-law.git
 cd helper-in-law
 
-# 2. Install dependencies
-uv sync
+# 2. Install dependencies (add --extra pdf for PDFs, --extra ui for Streamlit)
+uv sync --extra ui
 
-# 3. Configure
+# 3. Pull the local models
+ollama pull qwen3:1.7b
+ollama pull nomic-embed-text
+
+# 4. Configure (optional; defaults work)
 cp .env.example .env
-# edit .env and set ANTHROPIC_API_KEY
 
-# 4. Start backing services (Postgres, Qdrant, Redis, MinIO)
-docker compose up -d
-
-# 5. Create the database schema
-uv run alembic upgrade head
-
-# 6. Ingest a small sample, then build the index
-uv run python -m helperinlaw.ingest --court SC --limit 200
+# 5. Ingest the sample corpus, then build the index
+uv run python -m helperinlaw.ingest data/sample
 uv run python -m helperinlaw.index build
 
-# 7. Run
-uv run uvicorn helperinlaw.api.main:app --host 127.0.0.1 --port 8000   # REST API
-uv run streamlit run ui/app.py                                      # Web UI
+# 6. Run
+uv run python -m helperinlaw.api        # REST API on 127.0.0.1:8000
+uv run streamlit run ui/app.py          # Web UI
+uv run python -m helperinlaw.mcp_server # MCP (stdio)
 ```
+
+Without Ollama the system still works: retrieval falls back to BM25 and answers to verbatim extractive quotes (`HIL_USE_LLM=false`, `HIL_USE_DENSE=false`).
 
 ---
 
@@ -227,6 +228,7 @@ Use the tools from Claude Desktop, Claude Code, or any MCP client. All tools are
 
 ```bash
 claude mcp add helper-in-law -- uv run --directory /path/to/helper-in-law python -m helperinlaw.mcp_server
+# Streamable HTTP (localhost only): uv run python -m helperinlaw.mcp_server --http --port 8765
 ```
 
 **Claude Desktop (`claude_desktop_config.json`):**
@@ -271,8 +273,8 @@ You can also override per question in plain language: *"shorter"*, *"as a table"
 
 ```
 helper-in-law/
+├── data/sample/          # fictional test judgments
 ├── docs/                 # architecture, runbooks, ROADMAP.md, licence-log.md
-├── migrations/           # Alembic database migrations
 ├── src/helperinlaw/
 │   ├── core/             # config, logging, shared types
 │   ├── ingest/           # downloaders, extraction, cleaning
@@ -288,7 +290,6 @@ helper-in-law/
 ├── ui/                   # Streamlit app
 ├── eval/                 # datasets, fault injection, evaluation runner, reports
 ├── tests/                # unit, integration, e2e, MCP smoke tests
-├── docker-compose.yml
 └── .env.example
 ```
 
@@ -296,20 +297,19 @@ helper-in-law/
 
 ## Configuration
 
-Set in `.env` (see `.env.example`):
+Set in `.env` (see `.env.example`). All variables use the `HIL_` prefix.
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | LLM for claim extraction and presentation | required |
-| `DATABASE_URL` | Postgres connection | local compose |
-| `QDRANT_URL` | Vector index | `http://localhost:6333` |
-| `REDIS_URL` | Cache and queue | local compose |
-| `S3_ENDPOINT` | Raw PDFs (MinIO locally) | local compose |
-| `EMBED_MODEL` | Embedding model | `BAAI/bge-m3` |
-| `RERANK_MODEL` | Cross-encoder | `BAAI/bge-reranker-v2-m3` |
-| `JUDGE_MODEL` | Entailment checker (must differ from the answer model) | set explicitly |
-| `EVIDENCE_MIN_SCORE` | Below this, the system abstains | tuned on eval set |
-| `BIND_HOST` | Server bind address | `127.0.0.1` |
+| `HIL_DB_PATH` | SQLite database | `data/helperinlaw.db` |
+| `HIL_OLLAMA_URL` | Ollama server | `http://localhost:11434` |
+| `HIL_LLM_MODEL` | Claim extraction and translation | `qwen3:1.7b` |
+| `HIL_JUDGE_MODEL` | Entailment judge (must differ from the answer model); empty = deterministic lexical judge | empty |
+| `HIL_EMBED_MODEL` | Embeddings | `nomic-embed-text` |
+| `HIL_USE_LLM` / `HIL_USE_DENSE` | Turn the LLM / embeddings off (extractive, BM25) | `true` |
+| `HIL_INDEX_VERSION` | Index version served | `v1` |
+| `HIL_EVIDENCE_MIN_SCORE` | Below this, the system abstains | `0.5` |
+| `HIL_BIND_HOST` | Server bind address | `127.0.0.1` |
 
 ---
 
@@ -327,7 +327,8 @@ Quality is measured, not assumed. Datasets live in `eval/datasets/`:
 | Parser gold | Extraction accuracy |
 
 ```bash
-uv run python eval/run_eval.py --suite all
+uv run python eval/run_eval.py              # offline gates
+uv run python eval/run_eval.py --llm --dense  # with Ollama
 ```
 
 **Phase 1 exit targets** include: Recall@10 ≥ 0.85, **0 unsupported claims displayed**, **0 responses without citations**, citation accuracy ≥ 0.99, 100% pass on the adversarial set.
@@ -358,7 +359,7 @@ Code standards:
 
 - **Source terms:** every data source must be recorded in [`docs/licence-log.md`](docs/licence-log.md) (URL, terms, date accessed). Confirm you are allowed to store and serve the text before any public deployment.
 - **Personal data:** judgments can contain sensitive personal data (e.g. minors, victims, matrimonial and sexual-offence matters). Do not attempt to de-anonymise anonymised judgments. Privacy handling for public deployment (Phase 2) must be reviewed against India's DPDP Act with qualified advice.
-- **No data leaves your machine** in Phase 1 except calls to the LLM API for generation and verification.
+- **No data leaves your machine** in Phase 1: the LLM and embeddings run locally in Ollama.
 
 ---
 
@@ -380,4 +381,4 @@ MIT (see `LICENSE`). Note: this covers the **code only**. Court judgment data ha
 
 ## Acknowledgements
 
-Inspired by the product category of Indian legal-tech case search. Built on open tooling: FastAPI, Qdrant, PostgreSQL, Streamlit, the Model Context Protocol, and open embedding and reranking models from BAAI.
+Inspired by the product category of Indian legal-tech case search. Built on open tooling: FastAPI, SQLite FTS5, Ollama, Streamlit and the Model Context Protocol.
