@@ -11,14 +11,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "film"))
 from motion import (  # noqa: E402
-    BLACK, GREY_D, H, INK, PAPER, W, WHITE, bloom, day_counter, encoder, ease, env, font, framed, icon,
-    master, motes, mux, put, scales, score, screen_frames, wall, words, write_wav, FPS,
+    BLACK, GREY_D, H, INK, W, WHITE, bloom, day_counter, encoder, ease, env, font, framed, icon,
+    finish, motes, music_bed, mux, put, scales, screen_frames, wall, words, write_wav, FPS,
 )
 from PIL import Image  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "trailer.mp4"
 TURN = 15.0  # the moment the light comes in, in picture and in music
+DAWN_FROM = 20.0  # start Morning Mood here so its sunrise peaks on the closing beats
 
 
 def s_wall(t: float, dur: float) -> Image.Image:
@@ -95,7 +96,7 @@ TOTAL = OUTRO + END_DUR
 
 def audio(silent: Path, work: Path) -> None:
     wav = work / "trailer.wav"
-    write_wav(wav, master(score(TOTAL, TURN, OUTRO, build=TURN + 11)))
+    write_wav(wav, finish(music_bed(TOTAL, TURN, DAWN_FROM)))
     mux(silent, wav, OUT)
 
 
