@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 from motion import (
     BLACK, FPS, GREY_D, H, INK, SR, W, WHITE, bloom, day_counter, encoder, ease, env, font, framed, icon,
-    compress, finish, motes, music_bed, smooth, mux, put, scales, screen_frames, wall, words, write_wav,
+    finish, motes, music_bed, smooth, mux, put, scales, screen_frames, wall, words, write_wav,
 )
 from PIL import Image
 
@@ -163,8 +163,8 @@ def main(rec: Path, model: Path, out: Path, audio_only: bool = False) -> None:
     if not (audio_only and silent.exists()):
         render(scenes, durs, marks, rec, silent)
 
-    # Sombre until the turn, then the braam and the drop.
-    music = compress(music_bed(total, TURN))
+    # The soundtrack, with its reveal on the turn.
+    music = music_bed(total, TURN)
     vo = np.zeros(len(music))
     for st, clip in zip(starts, clips, strict=True):
         i = int((st + 0.45) * SR)
