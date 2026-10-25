@@ -66,6 +66,7 @@ def retrieve(
     cases = {c.case_id for c, _ in judgments}
     applied = Counter(s for cid in cases for act, s in store.statutes_of(cid) if act == "CONST")
     extra = [c for a in applied if (c := store.get_chunk(cfg.index_version, f"{PREFIX}{a}:1-1"))]
+    # (Weighting votes by how rare an Article is was tried and measured worse: eval/run_scenarios.py.)
     boost = {f"{PREFIX}{a}": PRECEDENT_BOOST * k / len(cases) for a, k in applied.items()}
     provisions = best("provision", MAX_PROVISIONS, 1, extra, boost)
     ranked = sorted(provisions + judgments, key=lambda x: -x[1])
