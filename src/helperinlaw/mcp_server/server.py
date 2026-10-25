@@ -1,10 +1,13 @@
 """MCP adapter: read-only tools over service.py. Tool results are the verified response
 object, never raw LLM text. Phase 1: no auth; stdio, or Streamable HTTP on localhost only."""
 
+import functools
 import json
+from collections.abc import Callable
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
 from helperinlaw.core.types import Filters
@@ -37,13 +40,29 @@ def set_service(s: Service) -> None:
     _service = s
 
 
+def tool(**kw: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Register a tool whose expected failures (unknown id, bad setting) are tool errors the
+    client can read, not crashes."""
+    def wrap(fn: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(fn)
+        def inner(*args: Any, **kwargs: Any) -> Any:
+            try:
+                return fn(*args, **kwargs)
+            except KeyError as e:
+                raise ToolError(f"not found: {e.args[0]}") from e
+            except ValueError as e:
+                raise ToolError(str(e)) from e
+        return mcp.tool(**kw)(inner)
+    return wrap
+
+
 def capped(result: dict[str, Any]) -> dict[str, Any]:
     if len(json.dumps(result, default=str)) > MAX_RESULT_CHARS:
         raise ValueError("result too large; narrow the request")
     return result
 
 
-@mcp.tool(annotations=READ_ONLY)
+@tool(annotations=READ_ONLY)
 def search_judgments(query: str, court: str | None = None, year_from: int | None = None,
                      year_to: int | None = None, limit: int = 10) -> dict[str, Any]:
     """Search indexed judgments (keyword + semantic). Returns up to 20 case ids with snippets
@@ -52,7 +71,7 @@ def search_judgments(query: str, court: str | None = None, year_from: int | None
     return capped({"results": hits, "notice": QUOTED})
 
 
-@mcp.tool(annotations=READ_ONLY)
+@tool(annotations=READ_ONLY)
 def ask_legal_question(question: str, court: str | None = None, year_from: int | None = None,
                        year_to: int | None = None, depth: str | None = None,
                        structure: str | None = None, profile_id: str = "default") -> dict[str, Any]:
@@ -65,39 +84,39 @@ def ask_legal_question(question: str, court: str | None = None, year_from: int |
     return capped({**r.model_dump(), "notice": QUOTED})
 
 
-@mcp.tool(annotations=READ_ONLY)
+@tool(annotations=READ_ONLY)
 def get_judgment(case_id: str) -> dict[str, Any]:
     """Metadata (title, court, date, bench, citations), section map, statutes and treatment."""
     return capped(svc().get_case(case_id))
 
 
-@mcp.tool(annotations=READ_ONLY)
+@tool(annotations=READ_ONLY)
 def get_paragraph(case_id: str, start: int, end: int | None = None) -> dict[str, Any]:
     """Exact paragraph text, at most 10 paragraphs per call."""
     return capped({"paragraphs": svc().get_paragraphs(case_id, start, end), "notice": QUOTED})
 
 
-@mcp.tool(annotations=READ_ONLY)
+@tool(annotations=READ_ONLY)
 def find_citing_cases(case_id: str) -> dict[str, Any]:
     """Judgments in the corpus that cite this case, with treatment (followed / distinguished /
     overruled)."""
     return capped({"citing": svc().find_citing_cases(case_id)})
 
 
-@mcp.tool(annotations=READ_ONLY)
+@tool(annotations=READ_ONLY)
 def lookup_statute(act: str, section: str) -> dict[str, Any]:
     """A statute section with its old/new-code equivalent (IPC<->BNS, CrPC<->BNSS,
     Evidence Act<->BSA) and the judgments that apply it."""
     return capped(svc().lookup_statute(act, section))
 
 
-@mcp.tool(annotations=READ_ONLY)
+@tool(annotations=READ_ONLY)
 def get_profile(profile_id: str = "default") -> dict[str, Any]:
     """The user's answer-style profile."""
     return svc().get_profile(profile_id).model_dump()
 
 
-@mcp.tool()
+@tool()
 def set_style(changes: dict[str, Any], profile_id: str = "default") -> dict[str, Any]:
     """Update answer-style settings (depth, structure, tone, citation_style, ...). Only style
     fields can change; citations, verification and abstaining are always on."""
