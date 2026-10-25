@@ -332,108 +332,78 @@ def screen_frames(rec: Path, start: float, end: float, n_out: int) -> Iterator[t
     proc.wait()
 
 
-# --- score: hopeless, then hopeful -----------------------------------------------------------------
+# --- music: public-domain recordings, hopeless then hopeful ---------------------------------------
+
+MUSIC_DIR = Path("data/music")
+# Both: Edvard Grieg, Peer Gynt Suite No. 1, Musopen Symphony. Wikimedia Commons, Public domain.
+SORROW = ("death_of_aase.flac", "https://upload.wikimedia.org/wikipedia/commons/3/35/"
+          "Grieg_-_Peer_Gynt_Suite_No._1%2C_Op._46_-_II._The_Death_of_Aase_%28Musopen_Symphony%29.flac")
+DAWN = ("morning_mood.flac", "https://upload.wikimedia.org/wikipedia/commons/c/c2/"
+        "Grieg_-_Peer_Gynt_Suite_No._1%2C_Op._46_-_I._Morning_Mood_%28Musopen_Symphony%29.flac")
 
 
-def hz(n: float) -> float:
-    return 440.0 * 2 ** ((n - 69) / 12)
+def load(track: tuple[str, str]) -> np.ndarray:
+    """Stereo float samples at SR, downloading the public-domain file once."""
+    import urllib.request
+
+    path = MUSIC_DIR / track[0]
+    if not path.exists():
+        MUSIC_DIR.mkdir(parents=True, exist_ok=True)
+        req = urllib.request.Request(track[1], headers={"User-Agent": "helper-in-law-film/1.0"})
+        path.write_bytes(urllib.request.urlopen(req, timeout=300).read())
+    raw = subprocess.run([FF, "-loglevel", "error", "-i", str(path), "-ac", "2", "-ar", str(SR), "-f", "f32le", "-"],
+                         capture_output=True, check=True).stdout
+    return np.frombuffer(raw, dtype="<f4").reshape(-1, 2).astype(np.float64)
 
 
-def piano(freq: float, dur: float, vel: float = 1.0) -> np.ndarray:
-    t = np.arange(int(dur * SR)) / SR
-    tone = sum(a * np.sin(2 * np.pi * freq * k * t) for k, a in ((1, 1.0), (2, 0.4), (3, 0.14), (4, 0.06)))
-    return tone * np.minimum(1, t / 0.006) * np.exp(-t * (1.8 + freq / 1000)) * vel
+def rms(x: np.ndarray) -> float:
+    return float(np.sqrt(np.mean(x**2)) + 1e-9)
 
 
-def strings(freqs: list[float], dur: float, attack: float = 1.6) -> np.ndarray:
-    """A bowed, slightly moving pad (harmonic stack with slow vibrato)."""
-    t = np.arange(int(dur * SR)) / SR
-    vib = 0.004 * np.sin(2 * np.pi * 5.2 * t)
-    sig = sum(sum((1 / k) * np.sin(2 * np.pi * f * k * t * (1 + vib)) for k in range(1, 6)) for f in freqs)
-    return sig * np.minimum(1, t / attack) * np.minimum(1, (dur - t) / 1.4)
+def music_bed(total: float, turn: float, dawn_from: float, xfade: float = 1.8) -> np.ndarray:
+    """Grief until `turn` (The Death of Aase, from its opening), then dawn (Morning Mood from
+    `dawn_from` s), crossfaded across the turn. The grief sits ~4 dB under the dawn."""
+    n, n_turn, nx = int(total * SR), int(turn * SR), int(xfade * SR)
+    sorrow = load(SORROW)[: n_turn + nx]
+    dawn = load(DAWN)[int(dawn_from * SR):][: n - n_turn + nx]
+    dawn = np.pad(dawn, ((0, max(0, n - n_turn + nx - len(dawn))), (0, 0)))
+    sorrow *= (0.7 * rms(dawn[: 10 * SR])) / rms(sorrow)  # just under the first light, not the climax
+    out = np.zeros((n + nx, 2))
+    out[: len(sorrow)] += sorrow * np.clip((len(sorrow) - np.arange(len(sorrow)))[:, None] / nx, 0, 1)
+    fade_in = np.clip(np.arange(len(dawn))[:, None] / nx, 0, 1)
+    out[n_turn - nx // 2 : n_turn - nx // 2 + len(dawn)] += (dawn * fade_in)[: n + nx - (n_turn - nx // 2)]
+    return out[:n]
 
 
-def riser(dur: float) -> np.ndarray:
-    t = np.arange(int(dur * SR)) / SR
-    noise = np.random.default_rng(1).normal(0, 1, len(t))
-    tone = np.sin(2 * np.pi * (200 + 900 * (t / dur) ** 2) * t)
-    return (noise * 0.25 + tone * 0.6) * (t / dur) ** 2.2
+def compress(sig: np.ndarray, threshold_db: float = -24.0, ratio: float = 3.0) -> np.ndarray:
+    """Gentle broadcast-style compression so quiet passages stay audible next to the climax."""
+    mono = np.abs(sig).mean(axis=1) if sig.ndim == 2 else np.abs(sig)
+    win = int(0.08 * SR)
+    level = np.sqrt(np.convolve(mono**2, np.ones(win) / win, "same")) + 1e-9
+    thr = 10 ** (threshold_db / 20) * mono.max()
+    gain = np.where(level > thr, (thr / level) ** (1 - 1 / ratio), 1.0)
+    gain = np.convolve(gain, np.ones(win) / win, "same")  # smooth: no pumping clicks
+    return sig * (gain[:, None] if sig.ndim == 2 else gain)
 
 
-def score(total: float, turn: float, outro: float, build: float | None = None) -> np.ndarray:
-    """0..turn: hopeless (A minor, slow, low, sparse, a weary heartbeat).
-    turn: light breaks (riser into a bright D major bloom).
-    turn..outro: hopeful (D - A - Bm - G, rising piano arpeggios, warm strings, soft pulse);
-    from `build` an upper octave joins. outro: resolve on D with a long tail."""
-    out = np.zeros(int((total + 6) * SR))
-
-    def add(sig: np.ndarray, at: float, gain: float) -> None:
-        i = max(0, int(at * SR))
-        j = min(len(out), i + len(sig))
-        if j > i:
-            out[i:j] += sig[: j - i] * gain
-
-    # hopeless
-    add(strings([hz(45), hz(52)], turn + 0.5, 3.0), 0.0, 0.020)
-    for at, n in [(0.8, 69), (2.6, 67), (4.4, 64), (6.2, 60), (8.0, 62), (9.8, 59), (11.6, 57), (13.0, 56)]:
-        if at < turn - 0.6:
-            add(piano(hz(n), 4.5, 0.6), at, 0.085)
-            add(piano(hz(n - 12), 4.5, 0.4), at, 0.05)
-    t = 1.2
-    while t < turn - 1.0:  # a slow, tired heartbeat
-        for dt, g in ((0.0, 0.16), (0.28, 0.10)):
-            tt = np.arange(int(0.3 * SR)) / SR
-            add(np.sin(2 * np.pi * 48 * tt) * np.exp(-tt * 14), t + dt, g)
-        t += 1.8
-    # the turn
-    add(riser(1.6), turn - 1.6, 0.05)
-    add(strings([hz(50), hz(57), hz(62), hz(66)], 5.0, 0.4), turn, 0.020)
-    for i, n in enumerate([62, 66, 69, 74, 78, 81]):
-        add(piano(hz(n), 5.0, 0.8), turn + i * 0.07, 0.07)
-    # hopeful
-    chords = [[50, 57, 62, 66], [45, 52, 57, 61], [47, 54, 59, 62], [43, 50, 55, 59]]
-    bar = 60 / 96 * 4
-    t, c = turn + 1.2, 0
-    while t < outro:
-        ch = chords[c % 4]
-        add(strings([hz(n) for n in ch[:3]], bar + 1.6, 0.8), t - 0.8, 0.012)
-        add(piano(hz(ch[0] - 12), bar, 0.7), t, 0.07)
-        for k in range(8):
-            n = [ch[1], ch[2], ch[3], ch[2] + 12, ch[3], ch[2] + 12, ch[3] + 12, ch[1] + 12][k] + 12
-            add(piano(hz(n), 1.6, 0.55 if k % 2 else 0.7), t + k * bar / 8, 0.05)
-            if build and t >= build:
-                add(piano(hz(n + 12), 1.2, 0.4), t + k * bar / 8 + bar / 16, 0.025)
-        for k in range(4):
-            tt = np.arange(int(0.22 * SR)) / SR
-            add(np.sin(2 * np.pi * 55 * tt) * np.exp(-tt * 18), t + k * bar / 4, 0.11 if k % 2 == 0 else 0.07)
-        t += bar
-        c += 1
-    # resolve
-    add(strings([hz(50), hz(57), hz(62), hz(66), hz(69)], 7.0, 0.6), outro, 0.016)
-    for i, n in enumerate([62, 66, 69, 74, 78, 81, 86]):
-        add(piano(hz(n), 6.5, 0.7), outro + 0.3 + i * 0.28, 0.06)
-    # the arc you can feel: the hopeless part sits ~4 dB lower, opening up over the turn
-    t_all = np.arange(len(out)) / SR
-    out *= 0.63 + 0.37 * np.clip((t_all - (turn - 1.2)) / 1.4, 0, 1)
-    return out[: int(total * SR)]
-
-
-def master(sig: np.ndarray) -> np.ndarray:
+def finish(sig: np.ndarray, peak: float = 0.89) -> np.ndarray:
+    """Compress, fade in/out and normalise. No saturation: these are real recordings."""
+    sig = compress(sig)
     n = len(sig)
-    fade = np.clip(np.arange(n) / (0.6 * SR), 0, 1) * np.clip((n - np.arange(n)) / (2.8 * SR), 0, 1)
-    sig = np.tanh(sig * fade * 1.25) / np.tanh(1.25)
-    return sig / max(1e-6, np.abs(sig).max()) * 0.89
+    fade = np.clip(np.arange(n) / (0.5 * SR), 0, 1) * np.clip((n - np.arange(n)) / (3.0 * SR), 0, 1)
+    sig = sig * (fade[:, None] if sig.ndim == 2 else fade)
+    return sig / max(1e-6, np.abs(sig).max()) * peak
 
 
 def write_wav(path: Path, sig: np.ndarray) -> None:
     import wave
 
-    stereo = np.stack([sig, np.roll(sig, int(0.012 * SR)) * 0.97], axis=1)  # a touch of width
+    stereo = sig if sig.ndim == 2 else np.stack([sig, sig], axis=1)
     with wave.open(str(path), "wb") as wf:
         wf.setnchannels(2)
         wf.setsampwidth(2)
         wf.setframerate(SR)
-        wf.writeframes((stereo * 32767).astype("<i2").tobytes())
+        wf.writeframes((np.clip(stereo, -1, 1) * 32767).astype("<i2").tobytes())
 
 
 def encoder(path: Path) -> subprocess.Popen:  # type: ignore[type-arg]
