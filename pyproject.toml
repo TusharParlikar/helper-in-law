@@ -1,0 +1,48 @@
+[project]
+name = "helperinlaw"
+version = "0.1.0"
+description = "Citation-first research over Indian court judgments, with machine-verified grounding."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Tushar Parlikar", email = "tparlikar497@gmail.com" }]
+dependencies = [
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "fastapi>=0.111",
+    "uvicorn>=0.30",
+    "mcp>=1.9",
+]
+
+[project.optional-dependencies]
+pdf = ["pymupdf>=1.24"]
+ui = ["streamlit>=1.36"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10", "httpx>=0.27"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/helperinlaw"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["helperinlaw.core.*", "helperinlaw.ground.*"]
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
