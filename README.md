@@ -19,17 +19,18 @@
 2. [Why it's different: the grounding guarantee](#why-its-different-the-grounding-guarantee)
 3. [Features](#features)
 4. [How it works](#how-it-works)
-5. [Project status and roadmap](#project-status-and-roadmap)
-6. [Quick start](#quick-start)
-7. [Use it](#use-it) (UI, REST API, MCP)
-8. [Personalised answers](#personalised-answers)
-9. [Project structure](#project-structure)
-10. [Configuration](#configuration)
-11. [Evaluation](#evaluation)
-12. [Development](#development)
-13. [Data, licensing and privacy](#data-licensing-and-privacy)
-14. [Contributing](#contributing)
-15. [License](#license)
+5. [Results](#results)
+6. [Project status and roadmap](#project-status-and-roadmap)
+7. [Quick start](#quick-start)
+8. [Use it](#use-it) (UI, REST API, MCP)
+9. [Personalised answers](#personalised-answers)
+10. [Project structure](#project-structure)
+11. [Configuration](#configuration)
+12. [Evaluation](#evaluation)
+13. [Development](#development)
+14. [Data, licensing and privacy](#data-licensing-and-privacy)
+15. [Contributing](#contributing)
+16. [License](#license)
 
 ---
 
@@ -129,6 +130,43 @@ Two stages on purpose:
 - **Stage B (presentation):** decide how to say it for *this* user. It can only use verified claims.
 
 REST, MCP and the UI all call one function layer (`service.py`). No business logic lives in handlers.
+
+---
+
+## Results
+
+Measured on the live corpus: the **Constitution of India** (461 articles, official text as on 1 May 2024) and **150 Supreme Court judgments** (2020-2024). The benchmark is 47 lawyer-style scenarios, each labelled with the Article(s) that govern it, across 15 areas of constitutional law, plus 8 out-of-scope questions. Default mode: verbatim passages, keyword search, no LLM.
+
+**Finding the law**
+
+| Measure | Result |
+|---|---|
+| Correct Article shown for the situation | **94%** (44/47) |
+| Correct Article is the first one shown | **72%** (34/47) |
+| A cited Supreme Court judgment applies that Article | **79%** (37/47) |
+| Out-of-scope questions refused ("not found", no guessing) | **100%** (8/8) |
+| Median / 95th-percentile answer time | 0.9 s / 1.4 s |
+
+Strongest areas (first Article correct): arrest and detention, speech and expression, public employment, trade and occupation (all 100%), life and personal liberty (92%). Weakest: equality / Article 14 (25%) and the single property scenario (0%). Every miss is listed in [`eval/reports/scenarios.md`](eval/reports/scenarios.md).
+
+**Grounding: what is shown is what the record says**
+
+| Measure | Result |
+|---|---|
+| Unsupported statements displayed | **0** (of 225 quoted passages across 47 answers) |
+| Quotes found verbatim at the cited paragraph | **100%** (225/225), checked independently against the stored text |
+| Answers without citations | **0** |
+| Fault injection: corrupted claims the verifier blocks | **100%** across 10 corruption types (fake case names, altered numbers, flipped meaning, removed negations, fabricated quotes...) |
+| Phase 1 gates (retrieval, abstain, false premise, prompt injection, style invariance) | **11/11 pass** ([`eval/reports/latest.md`](eval/reports/latest.md)) |
+
+**Read these numbers honestly**
+
+- The scenario labels are standard constitutional law written by the developer and **have not yet been reviewed by a lawyer**.
+- 47 scenarios is a small sample. With 0 failures in 47 answers, the 95% upper bound on the true unsupported-answer rate is about 3/47, roughly 6%.
+- The lay-to-legal vocabulary and the evidence gate were tuned while looking at this benchmark. A fresh, held-out set of scenarios is needed for an unbiased figure (Phase 3).
+- The corpus holds 150 judgments; a scenario whose leading precedent is not among them can still get the right Article but weaker case support.
+
+Reproduce: `uv run python eval/run_scenarios.py`. Building it found and fixed three real bugs: report citations such as "[1993] 2 SCR 581" being misread as paragraph numbers, a quote matcher that was very slow on long judgments, and off-topic questions matching common words.
 
 ---
 
@@ -340,10 +378,12 @@ Quality is measured, not assumed. Datasets live in `eval/datasets/`:
 | False-premise | Must not accept wrong premises |
 | Adversarial | Prompt-injection and safety |
 | Parser gold | Extraction accuracy |
+| Scenarios | Lawyer-style situations labelled with the governing Article(s); out-of-scope questions |
 
 ```bash
-uv run python eval/run_eval.py              # offline gates
-uv run python eval/run_eval.py --llm --dense  # with Ollama
+uv run python eval/run_eval.py              # Phase 1 gates on the sample set
+uv run python eval/run_eval.py --llm --dense  # the same, with Ollama
+uv run python eval/run_scenarios.py         # scenario benchmark on the live corpus (see Results)
 ```
 
 **Phase 1 exit targets** include: Recall@10 ≥ 0.85, **0 unsupported claims displayed**, **0 responses without citations**, citation accuracy ≥ 0.99, 100% pass on the adversarial set.
