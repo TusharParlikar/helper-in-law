@@ -5,13 +5,13 @@ from collections import Counter
 
 from helperinlaw.core.store import Store
 from helperinlaw.core.types import ClaimSet, Source, VerificationReport, VerifiedClaim, VerifiedRef
-from helperinlaw.ground.text import content_terms, negated, normalise
+from helperinlaw.ground.text import content_terms, negated, normalise, paragraphs_of
 from helperinlaw.ground.verify.allowlist import suspicious
 from helperinlaw.ground.verify.entail import judge
 from helperinlaw.ground.verify.entities import entities_supported
 from helperinlaw.ground.verify.graph import overruled_by
 from helperinlaw.ground.verify.injection import looks_injected
-from helperinlaw.ground.verify.quote import find_quote
+from helperinlaw.ground.verify.quote import find_quote, source_span
 
 ROLE_BLOCKED = {"arguments"}  # counsel's submissions are not the court's holding
 
@@ -47,6 +47,7 @@ def check_claim(
     if suspicious(claim_text, allowed):
         return "allowlist", []
     verified: list[VerifiedRef] = []
+    displayed: list[str] = []
     for source_id, quote in refs:
         src = by_id.get(source_id)
         if src is None:
@@ -62,12 +63,16 @@ def check_claim(
         ):
             return "role_mismatch", []
         verified.append(VerifiedRef(case_id=src.chunk.case_id, para=para, quote=quote.strip()))
+        displayed.append(source_span(quote, dict(paragraphs_of(src.chunk.text))[para]))
     quotes = [r.quote for r in verified]
     if entities_supported(claim_text, quotes):
         return "entities", []
     if judge(claim_text, " ".join(quotes), judge_model, answer_model) != "supported":
         return "entailment", []
-    return None, verified
+    # Checks ran on the model's quote; what the user sees is the verbatim source text.
+    return None, [
+        r.model_copy(update={"quote": d}) for r, d in zip(verified, displayed, strict=True)
+    ]
 
 
 def verify(

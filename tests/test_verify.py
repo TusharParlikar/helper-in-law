@@ -45,6 +45,17 @@ def test_quote_fuzzy_tolerates_ocr_noise_only() -> None:
     )
 
 
+def test_displayed_quote_is_verbatim_source() -> None:
+    from helperinlaw.ground.verify.quote import source_span
+
+    para = (
+        "First sentence here. Bail may be refused where there is a reasonable apprehension. Last."
+    )
+    assert source_span("bail  MAY be refused where there is a “reasonable” apprehension", para) == (
+        "Bail may be refused where there is a reasonable apprehension."
+    )
+
+
 def test_quote_too_short_is_rejected() -> None:
     assert find_quote("Bail may be", CHUNK) is None
 
