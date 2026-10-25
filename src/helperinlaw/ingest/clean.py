@@ -4,6 +4,7 @@ import re
 from collections import Counter
 
 PAGE_NO = re.compile(r"^\s*(page\s+\d+(\s+of\s+\d+)?|-?\s*\d+\s*-?)\s*$", re.I)
+MARGIN = re.compile(r"^\s*[A-H]\s*$")  # Supreme Court Reports print A-H line markers in the margin
 BANNER = re.compile(
     r"^\s*(digitally signed|signature not verified|reportable|non-reportable)\b", re.I
 )
@@ -17,7 +18,10 @@ def clean(text: str) -> str:
     kept = [
         line
         for line in lines
-        if not PAGE_NO.match(line) and not BANNER.match(line) and line.strip() not in repeated
+        if not PAGE_NO.match(line)
+        and not BANNER.match(line)
+        and not MARGIN.match(line)
+        and line.strip() not in repeated
     ]
     out = "\n".join(kept)
     out = re.sub(r"(\w)-\n(\w)", r"\1\2", out)  # de-hyphenate words broken across lines
