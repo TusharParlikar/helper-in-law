@@ -77,9 +77,14 @@ def judgment_page(
         f"{escape(case['neutral_citation'])}<br>Bench: {escape('; '.join(case['bench']))}"
         f"</div><div class='chips'>{status}{chips}</div>"
     )
-    body = (
-        "<div class='fiction'>Fictional sample judgment written for testing. Not a real case.</div>"
-    )
+    body = ""
+    if case["id"].startswith("fs_"):
+        body = "<div class='fiction'>Fictional sample judgment written for testing. Not a real case.</div>"
+    elif case.get("url"):
+        body = (
+            f"<div class='card'><div class='tag'>Source</div><a href='{escape(case['url'])}' "
+            "target='_blank' rel='noopener'>Original judgment PDF (Supreme Court e-SCR) ↗</a></div>"
+        )
     if citing:
         body += (
             "<div class='card'><div class='tag'>Cited by</div>"
@@ -105,7 +110,8 @@ def statute_page(info: dict[str, Any]) -> str:
     header = (
         f"<h1>{escape(law['label'])}</h1><div class='meta'>{escape(info['query'])}</div>"
         f"<div class='chips'>{eq}<a class='chip' href='{escape(law['official_url'])}' "
-        f"target='_blank' rel='noopener'>Find official text on India Code ↗</a></div>"
+        f"target='_blank' rel='noopener'>"
+        f"{'Official PDF ↗' if law.get('text') else 'Find official text on India Code ↗'}</a></div>"
     )
     cases = (
         "".join(
@@ -116,8 +122,15 @@ def statute_page(info: dict[str, Any]) -> str:
         )
         or "<p class='note'>No indexed judgment applies this provision.</p>"
     )
+    official = ""
+    if law.get("text"):
+        official = (
+            f"<div class='card'><div class='tag'>Official text</div><p>{escape(law['text'])}</p>"
+            f"<div class='note'>Source: {escape(law['source'])}. <a href='{escape(law['official_url'])}' "
+            "target='_blank' rel='noopener'>Open the official PDF at this article ↗</a></div></div>"
+        )
     body = (
-        f"<div class='tag'>Judgments in the corpus applying it</div>{cases}"
+        f"{official}<div class='tag'>Judgments in the corpus applying it</div>{cases}"
         f"<p class='note'>{escape(info['note'])}</p>"
     )
     return page(law["label"], header, body)

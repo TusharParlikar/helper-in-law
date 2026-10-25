@@ -145,4 +145,6 @@ def feedback(body: FeedbackIn) -> dict[str, Any]:
 
 @app.get("/health")
 def health() -> dict[str, Any]:
-    return {"ok": True, "cases": len(svc().store.list_cases()), "index": svc().cfg.index_version}
+    s = svc()
+    return {"ok": True, "judgments": len(s.list_cases()), "corpus": s.coverage().corpus,
+            "index": s.cfg.index_version}
