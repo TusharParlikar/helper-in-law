@@ -10,11 +10,19 @@ from collections import Counter
 from helperinlaw.core.store import Store
 from helperinlaw.core.types import Chunk, Profile
 from helperinlaw.parse.statutes import aliases
+from helperinlaw.retrieve.rewrite import LEGAL_TERMS
 from helperinlaw.retrieve.understand import Query, terms
+
+SUFFIXES = ("ations", "ation", "ments", "ment", "ings", "ing", "edly", "ies", "ed", "es", "ly", "s")
 
 
 def stem(t: str) -> str:
-    return t[:5]
+    """Light suffix stripping: "arrested"/"arrest" match, "trademark" stays apart from "trade"."""
+    for suf in SUFFIXES:
+        if t.endswith(suf) and len(t) - len(suf) >= 4:
+            t = t[: -len(suf)]
+            break
+    return t[:9]
 
 
 MAX_TERMS = 10  # a long scenario is judged on its most distinctive words, not all of them
@@ -36,18 +44,27 @@ def idf_table(store: Store, index_version: str) -> dict[str, float]:
     return _IDF[key]
 
 
+def groups(query: str) -> dict[str, set[str]]:
+    """Each query word with the legal words that mean the same ("lawyer" -> legal practitioner)."""
+    out: dict[str, set[str]] = {}
+    for t in terms(query):
+        g = out.setdefault(stem(t), {stem(t)})
+        for phrase in LEGAL_TERMS.get(t, []):
+            g |= {stem(w) for w in terms(phrase)}
+    return out
+
+
 def coverage(query: str, text: str, idf: dict[str, float] | None = None) -> float:
-    """Share of the query's informative weight that the passage contains (0..1)."""
-    q = {stem(t) for t in terms(query)}
-    if not q:
+    """Share of the query's informative weight the passage contains (0..1). A word counts as
+    present if the passage uses it or its legal equivalent."""
+    qg = groups(query)
+    if not qg:
         return 0.0
     doc = {stem(t) for t in terms(text)}
-    if not idf:
-        return len(q & doc) / len(q)
-    unseen = max(idf.values(), default=1.0)
-    weights = sorted(((idf.get(t, unseen), t) for t in q), reverse=True)[:MAX_TERMS]
-    total = sum(w for w, _ in weights)
-    return sum(w for w, t in weights if t in doc) / total if total else 0.0
+    unseen = max(idf.values(), default=1.0) if idf else 1.0
+    weighted = sorted(((idf.get(k, unseen) if idf else 1.0, k) for k in qg), reverse=True)[:MAX_TERMS]
+    total = sum(w for w, _ in weighted)
+    return sum(w for w, k in weighted if qg[k] & doc) / total if total else 0.0
 
 
 def rerank(
