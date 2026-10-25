@@ -5,6 +5,7 @@ import math
 from helperinlaw.core import ollama
 from helperinlaw.core.store import Store
 from helperinlaw.core.types import Case, Chunk, Filters
+from helperinlaw.ingest.official import is_provision
 from helperinlaw.parse.metadata import short_court
 from helperinlaw.parse.statutes import aliases
 from helperinlaw.retrieve.understand import Query, terms
@@ -37,6 +38,8 @@ def dense(store: Store, index_version: str, text: str, limit: int) -> list[tuple
 def passes(case: Case, f: Filters, store: Store) -> bool:
     if f.case_id and case.id != f.case_id:
         return False
+    if is_provision(case.id):
+        return True  # court/year filters choose precedents; the Constitution always applies
     if (
         f.court
         and short_court(case.court).lower() != f.court.lower()
