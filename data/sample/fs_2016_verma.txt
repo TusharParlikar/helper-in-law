@@ -1,0 +1,20 @@
+FICTIONAL SAMPLE JUDGMENT - FOR TESTING ONLY - NOT A REAL CASE
+IN THE SUPREME COURT OF INDIA
+CRIMINAL APPEAL NO. 404 OF 2016
+Rohit Verma v. State of NCT of Delhi
+Date of Judgment: 14-02-2016
+Bench: G. Reddy, J.; H. Bose, J.
+Citation: (2016) 2 FSR 404
+Neutral Citation: 2016 FSC 404
+
+JUDGMENT
+
+1. The prosecution relied on call detail records produced as computer printouts without a certificate under Section 65B of the Indian Evidence Act.
+
+2. The question is whether a certificate under Section 65B(4) of the Evidence Act is mandatory for the admissibility of electronic records.
+
+3. Where the party producing the electronic record is not in possession of the device from which it was produced, it cannot be expected to furnish a certificate under Section 65B(4).
+
+4. We hold that the requirement of a certificate under Section 65B(4) is procedural and may be relaxed in the interest of justice where the party is not in possession of the device.
+
+5. The appeal is dismissed.
