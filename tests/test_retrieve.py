@@ -48,11 +48,12 @@ def test_alias_finds_old_code_judgment(store: Store, cfg: Settings) -> None:
 
 
 def test_filters_restrict_results(store: Store, cfg: Settings) -> None:
+    # Filters choose precedents; Constitution articles always pass (they govern every court).
     sources, _ = retrieve(store, cfg, "bail", Filters(court="Bombay HC"), Profile())
-    assert sources and all(s.chunk.case_id == "fs_2021_shaikh" for s in sources)
+    assert sources and all(s.chunk.case_id == "fs_2021_shaikh" for s in sources if not s.chunk.case_id.startswith("coi-"))
     sources, _ = retrieve(store, cfg, "bail", Filters(year_to=2016), Profile())
     assert all(
-        s.chunk.case_id in {"fs_2015_mehta", "fs_2012_pillai", "fs_2016_verma"} for s in sources
+        s.chunk.case_id in {"fs_2015_mehta", "fs_2012_pillai", "fs_2016_verma"} for s in sources if not s.chunk.case_id.startswith("coi-")
     )
 
 
