@@ -127,6 +127,14 @@ def lookup_statute(act: str, section: str) -> dict[str, Any]:
 
 
 @tool(annotations=READ_ONLY)
+def get_constitution_article(article: str) -> dict[str, Any]:
+    """Official text of an Article of the Constitution of India (e.g. "21", "21A", "300A"), with
+    a link to the exact page of the Government of India's official publication and the indexed
+    judgments that apply it. Fetches the official PDF on first use."""
+    return capped({**svc().get_article(article), "notice": QUOTED})
+
+
+@tool(annotations=READ_ONLY)
 def get_profile(profile_id: str = "default") -> dict[str, Any]:
     """The user's answer-style profile."""
     return svc().get_profile(profile_id).model_dump()
