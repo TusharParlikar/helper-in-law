@@ -77,7 +77,7 @@ def english_lines(pdf: Path) -> list[tuple[int, str]]:
     import pymupdf
 
     out: list[tuple[int, str]] = []
-    with pymupdf.open(pdf) as doc:
+    with pymupdf.open(pdf) as doc:  # type: ignore[no-untyped-call]  # pymupdf ships no type hints
         for i, page in enumerate(doc):
             text = page.get_text()
             letters = [c for c in text if c.isalpha()]
