@@ -3,9 +3,10 @@
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
+from helperinlaw.api.pages import judgment_page, statute_page
 from helperinlaw.core.types import Filters, Profile, Response
 from helperinlaw.service import Service
 
@@ -78,6 +79,24 @@ def search(body: SearchIn) -> list[dict[str, Any]]:
 @app.get("/cases/{case_id}")
 def get_case(case_id: str) -> dict[str, Any]:
     return svc().get_case(case_id)
+
+
+@app.get("/cases")
+def list_cases() -> list[dict[str, Any]]:
+    return svc().list_cases()
+
+
+@app.get("/cases/{case_id}/view", response_class=HTMLResponse)
+def view_case(case_id: str) -> str:
+    s = svc()
+    case = s.get_case(case_id)
+    paras = [p.model_dump() for p in s.store.get_paragraphs(case_id)]
+    return judgment_page(case, paras, s.find_citing_cases(case_id), s.cfg.public_url)
+
+
+@app.get("/statutes/{act}/{section}/view", response_class=HTMLResponse)
+def view_statute(act: str, section: str) -> str:
+    return statute_page(svc().lookup_statute(act, section))
 
 
 @app.get("/cases/{case_id}/paragraphs/{n}")

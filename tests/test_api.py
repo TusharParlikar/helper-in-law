@@ -57,3 +57,20 @@ def test_profile_and_feedback(client: TestClient) -> None:
     assert client.post("/feedback", json={"answer_id": 1, "rating": 5}).status_code == 422
     assert client.delete("/profile?profile_id=api").json() == {"deleted": True}
     assert client.get("/health").json()["cases"] == 8
+
+
+def test_links_resolve_to_readable_pages(client: TestClient) -> None:
+    body = client.post(
+        "/ask", json={"question": "grounds for refusing bail under Section 439 CrPC"}
+    ).json()
+    c = body["citations"][0]
+    assert c["url"].endswith(f"/cases/{c['case_id']}/view#para-{c['para']}") and c["statutes"]
+    page = client.get(f"/cases/{c['case_id']}/view")
+    assert page.status_code == 200 and f"id='para-{c['para']}'" in page.text
+    assert "/statutes/CrPC/439/view" in page.text  # statute mentions are linked
+    law = body["laws"][0]
+    assert law["official_url"].startswith("https://") and law["url"].endswith("/view")
+    st = client.get("/statutes/CrPC/439/view")
+    assert st.status_code == 200 and "Arjun Mehta" in st.text and "BNSS 483" in st.text
+    assert client.get("/statutes/BNS/103/view").text.count("class='card'") == 2
+    assert len(client.get("/cases").json()) == 8
