@@ -18,6 +18,7 @@ from helperinlaw.core.types import (
 from helperinlaw.ground.pipeline import answer_content, retrieve
 from helperinlaw.ground.render import case_url, law_ref, render_citations, render_laws
 from helperinlaw.ground.verify.graph import treatment
+from helperinlaw.ingest.official import COI_EDITION, PREFIX, ingest_constitution, is_provision
 from helperinlaw.parse.statutes import ACT_NAMES, aliases, extract_statutes, normalise_act
 from helperinlaw.present.final_guard import guard
 from helperinlaw.present.overrides import parse_overrides, strip_overrides
@@ -43,7 +44,19 @@ class Service:
         self._claims: dict[tuple[str, ...], VerifiedClaimSet] = {}
 
     def coverage(self) -> Coverage:
-        return Coverage(corpus=self.cfg.corpus_name, as_of=self.cfg.corpus_as_of, limits=LIMITS)
+        if self.cfg.corpus_name:
+            return Coverage(corpus=self.cfg.corpus_name, as_of=self.cfg.corpus_as_of, limits=LIMITS)
+        cases = self.store.list_cases()
+        n_prov = sum(is_provision(c.id) for c in cases)
+        judgments = [c for c in cases if not is_provision(c.id)]
+        parts = []
+        if n_prov:
+            parts.append(f"Constitution of India, {n_prov} articles (official text as on 1 May 2024)")
+        if judgments:
+            years = sorted(c.date[:4] for c in judgments if c.date)
+            parts.append(f"{len(judgments)} judgments ({years[0]}-{years[-1]})" if years else f"{len(judgments)} judgments")
+        latest = max((c.date for c in judgments), default=self.cfg.corpus_as_of)
+        return Coverage(corpus="; ".join(parts) or "empty", as_of=latest, limits=LIMITS)
 
     # --- ask -----------------------------------------------------------------
 
@@ -232,6 +245,7 @@ class Service:
                 "url": case_url(self.cfg.public_url, c.id),
             }
             for c in self.store.list_cases()
+            if not is_provision(c.id)
         ]
 
     def get_paragraphs(
@@ -262,13 +276,36 @@ class Service:
                 )
         return out
 
+    def get_article(self, number: str) -> dict[str, Any]:
+        """Official text of a Constitution article. Fetches the Government of India's PDF from
+        the internet on first use if it isn't indexed yet."""
+        number = number.strip().upper().removeprefix("ARTICLE").strip()
+        if self.store.get_case(f"{PREFIX}{number}") is None:
+            ingest_constitution(self.store)  # downloads the official PDF, then parses it
+        case = self.store.get_case(f"{PREFIX}{number}")
+        if case is None:
+            raise KeyError(f"Article {number}")
+        info = self.lookup_statute("CONST", number)
+        return {
+            "article": number,
+            "title": case.neutral_citation,
+            "text": self.store.get_paragraphs(case.id)[0].text,
+            "official_url": case.url,
+            "source": COI_EDITION,
+            "judgments": [c for c in info["cases"] if not is_provision(c["case_id"])],
+        }
+
     def lookup_statute(self, act: str, section: str) -> dict[str, Any]:
         code = normalise_act(act) or act.upper()
+        if code in ("ART", "ARTICLE", "CONSTITUTION"):
+            code = "CONST"
         section = section.strip().upper()
         refs = aliases(code, section)
         cases: list[dict[str, Any]] = []
         for a, s in refs:
             for cid in self.store.cases_for_statute(a, s):
+                if is_provision(cid):
+                    continue  # the article itself is returned as "law", not as a judgment
                 c = self.store.get_case(cid)
                 para = next(
                     (
@@ -293,7 +330,7 @@ class Service:
             "query": f"{code} {section}",
             "equivalents": [f"{a} {s} ({ACT_NAMES.get(a, [a])[0]})" for a, s in refs],
             "cases": cases[:MAX_SEARCH],
-            "law": law_ref(code, section, self.cfg.public_url).model_dump(),
+            "law": law_ref(code, section, self.cfg.public_url, self.store).model_dump(),
             "note": "Correspondence table: verify against the official mapping.",
         }
 

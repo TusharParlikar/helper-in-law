@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     bind_host: str = "127.0.0.1"
     public_url: str = "http://127.0.0.1:8000"  # base for judgment and statute links
     corpus_as_of: str = "2024-12-31"
-    corpus_name: str = "Sample corpus (fictional test judgments)"
+    corpus_name: str = ""  # empty = describe what is actually indexed
 
 
 settings = Settings()
