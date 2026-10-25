@@ -1,8 +1,9 @@
 """Render the product video: the problem (0-15 s, in the dark), the turn at 15 s, then how it
 works, shown in the real app with zooms and highlights, narrated by a local neural voice.
 
-uv run --no-project --with pillow --with numpy --with imageio-ffmpeg --with piper-tts \
-    python scripts/film/film.py REC_DIR VOICE_MODEL.onnx OUT.mp4
+uv run --no-project --with pillow --with numpy --with imageio-ffmpeg --with kokoro-onnx \
+    python scripts/film/film.py REC_DIR KOKORO_DIR OUT.mp4
+KOKORO_DIR holds kokoro-v1.0.onnx and voices-v1.0.bin (Kokoro, Apache-2.0, runs locally).
 REC_DIR holds screen.webm + marks.json from record.py.
 """
 
@@ -124,19 +125,22 @@ HOPEFUL = [
 ]
 
 
-def voice(model: Path, scenes: list[Scene], work: Path) -> list[np.ndarray]:
-    from piper import PiperVoice, SynthesisConfig
+NARRATOR, PACE = "am_fenrir", 0.95  # chosen by ear from Kokoro's voices; a touch slower than default
 
-    v = PiperVoice.load(str(model))
-    cfg = SynthesisConfig(length_scale=1.1, noise_scale=0.55, noise_w_scale=0.7)
+
+def voice(kokoro_dir: Path, scenes: list[Scene], work: Path) -> list[np.ndarray]:
+    from kokoro_onnx import Kokoro
+
+    k = Kokoro(str(kokoro_dir / "kokoro-v1.0.onnx"), str(kokoro_dir / "voices-v1.0.bin"))
     clips = []
     for i, sc in enumerate(scenes):
-        path = work / f"vo_{i:02d}.wav"
-        with wave.open(str(path), "wb") as wf:
-            v.synthesize_wav(sc.vo, wf, syn_config=cfg)
-        with wave.open(str(path), "rb") as wf:
-            sr = wf.getframerate()
-            pcm = np.frombuffer(wf.readframes(wf.getnframes()), dtype="<i2").astype(np.float32) / 32768
+        pcm, sr = k.create(sc.vo, voice=NARRATOR, speed=PACE, lang="en-us")
+        pcm = np.asarray(pcm, dtype=np.float64)
+        with wave.open(str(work / f"vo_{i:02d}.wav"), "wb") as wf:  # kept for listening back
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(sr)
+            wf.writeframes((np.clip(pcm, -1, 1) * 32767).astype("<i2").tobytes())
         clips.append(np.interp(np.arange(int(len(pcm) * SR / sr)) / SR, np.arange(len(pcm)) / sr, pcm))
     return clips
 
@@ -150,6 +154,8 @@ def main(rec: Path, model: Path, out: Path, audio_only: bool = False) -> None:
     lens = [len(c) / SR for c in clips]
     # the problem takes exactly TURN seconds, so picture and music turn together
     raw = [max(sc.min_dur, n + 1.0) for sc, n in zip(HOPELESS, lens[: len(HOPELESS)], strict=True)]
+    if sum(lens[: len(HOPELESS)]) + 0.45 * len(HOPELESS) > TURN:
+        raise SystemExit(f"opening narration is {sum(lens[: len(HOPELESS)]):.1f}s: too long for the {TURN}s turn")
     durs = [d * TURN / sum(raw) for d in raw]
     for sc, n in zip(HOPEFUL, lens[len(HOPELESS):], strict=True):
         d = max(sc.min_dur, n + 1.2)
