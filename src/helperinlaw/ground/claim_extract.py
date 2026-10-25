@@ -58,6 +58,7 @@ SCHEMA: dict[str, Any] = {
 }
 
 MAX_CLAIMS = 8
+LLM_SOURCES = 5  # prompt size drives latency on small local models
 SECTION_TYPE = {"holding": "holding", "reasoning": "ratio", "facts": "fact"}
 SECTION_WEIGHT = {"facts": 0.6}  # prefer what the court held over the story
 
@@ -69,6 +70,7 @@ def render_sources(sources: list[Source]) -> str:
 
 def llm_claims(model: str, question: str, sources: list[Source]) -> tuple[ClaimSet, int]:
     """Returns (claims that passed schema validation, count rejected at parse time)."""
+    sources = sources[:LLM_SOURCES]
     raw = ollama.chat_json(
         model, SYSTEM, f"{render_sources(sources)}\n\nQuestion: {question}", SCHEMA
     )
