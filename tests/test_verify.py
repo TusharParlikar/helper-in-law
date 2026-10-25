@@ -54,6 +54,9 @@ def test_displayed_quote_is_verbatim_source() -> None:
     assert source_span("bail  MAY be refused where there is a “reasonable” apprehension", para) == (
         "Bail may be refused where there is a reasonable apprehension."
     )
+    # regression: a later clause used to drag in every sentence before it
+    article = "Title of the article. (1) First clause applies here. (2) Second clause applies there."
+    assert source_span("(2) Second clause applies there.", article) == "(2) Second clause applies there."
 
 
 def test_quote_too_short_is_rejected() -> None:

@@ -29,11 +29,11 @@ def source_span(quote: str, para: str) -> str:
     q = normalise(quote).strip(" .\"'")
     sents = sentences(para)
     best, best_score = para, 0.0
-    for i in range(len(sents)):
-        for j in range(i, min(i + 4, len(sents))):
-            span = " ".join(sents[i : j + 1])
+    for size in range(1, 5):  # shortest window first: a clause never drags in its neighbours
+        for i in range(len(sents) - size + 1):
+            span = " ".join(sents[i : i + size])
             if q in normalise(span):
-                return span  # first (shortest from the left) window containing the quote
+                return span
             score = SequenceMatcher(None, q, normalise(span), autojunk=False).ratio()
             if score > best_score:
                 best, best_score = span, score
