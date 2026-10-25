@@ -1,7 +1,8 @@
 """Record the real app (Streamlit on 127.0.0.1:8501, API on :8000) in a headless browser.
 
 uv run --no-project --with playwright python scripts/film/record.py OUT_DIR
-Writes OUT_DIR/screen.webm and OUT_DIR/marks.json (seconds from the start of the recording).
+Writes OUT_DIR/screen.webm and OUT_DIR/marks.json: for each moment, seconds from the start of
+the recording and the on-screen box of the element that matters then (for zooms and highlights).
 """
 
 import json
@@ -21,7 +22,7 @@ SCENARIO = (
 
 def main(out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
-    marks: dict[str, float] = {}
+    marks: dict[str, dict[str, object]] = {}
     with sync_playwright() as p:
         browser = p.chromium.launch()
         ctx = browser.new_context(viewport={"width": W, "height": H}, record_video_dir=str(out),
@@ -29,8 +30,14 @@ def main(out: Path) -> None:
         t0 = time.monotonic()
         page = ctx.new_page()
 
-        def mark(name: str) -> None:
-            marks[name] = round(time.monotonic() - t0, 2)
+        def mark(name: str, selector: str | None = None) -> None:
+            box = None
+            if selector:
+                loc = page.locator(selector).filter(visible=True).first
+                b = loc.bounding_box()
+                if b:
+                    box = [round(b["x"]), round(b["y"]), round(b["width"]), round(b["height"])]
+            marks[name] = {"t": round(time.monotonic() - t0, 2), "box": box}
 
         def glide(dy: int, seconds: float) -> None:
             steps = int(seconds * 30)
@@ -49,7 +56,7 @@ def main(out: Path) -> None:
         mark("typing")
         box.press_sequentially(SCENARIO, delay=28)
         page.wait_for_timeout(600)
-        mark("typed")
+        mark("typed", "div[data-testid=stForm]")
         page.get_by_role("button", name="Analyse").click()
         page.get_by_text("Constitutional provisions").wait_for(timeout=120000)
         page.wait_for_timeout(700)
@@ -57,13 +64,13 @@ def main(out: Path) -> None:
         page.mouse.move(W / 2, H / 2)
         glide(420, 2.5)
         page.wait_for_timeout(2500)
-        mark("provisions")
+        mark("provisions", ".card.prov")
         glide(650, 4.0)
         page.wait_for_timeout(2500)
-        mark("analysis")
+        mark("analysis", ".card:has(.point)")
         glide(700, 4.0)
         page.wait_for_timeout(3000)
-        mark("judgments")
+        mark("judgments", ".card.case")
 
         page.mouse.wheel(0, -20000)
         page.wait_for_timeout(800)
@@ -76,7 +83,7 @@ def main(out: Path) -> None:
         page.get_by_role("button", name="Look up").click()
         page.get_by_text("Article 21. Protection of life and personal liberty").wait_for(timeout=60000)
         page.wait_for_timeout(4500)
-        mark("article")
+        mark("article", ".card.prov")
 
         page.get_by_role("tab", name="Research").click()
         page.wait_for_timeout(800)
@@ -88,7 +95,7 @@ def main(out: Path) -> None:
         page.get_by_text("Nothing in the indexed sources").wait_for(timeout=60000)
         page.mouse.wheel(0, 380)
         page.wait_for_timeout(4000)
-        mark("notfound")
+        mark("notfound", ".card.empty")
 
         video = page.video
         ctx.close()
