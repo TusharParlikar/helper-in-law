@@ -332,25 +332,20 @@ def screen_frames(rec: Path, start: float, end: float, n_out: int) -> Iterator[t
     proc.wait()
 
 
-# --- music: public-domain recordings, hopeless then hopeful ---------------------------------------
+# --- music: copyright-free, hopeless then a launch-trailer drop -----------------------------------
 
 MUSIC_DIR = Path("data/music")
-# Both: Edvard Grieg, Peer Gynt Suite No. 1, Musopen Symphony. Wikimedia Commons, Public domain.
-SORROW = ("death_of_aase.flac", "https://upload.wikimedia.org/wikipedia/commons/3/35/"
-          "Grieg_-_Peer_Gynt_Suite_No._1%2C_Op._46_-_II._The_Death_of_Aase_%28Musopen_Symphony%29.flac")
-DAWN = ("morning_mood.flac", "https://upload.wikimedia.org/wikipedia/commons/c/c2/"
-        "Grieg_-_Peer_Gynt_Suite_No._1%2C_Op._46_-_I._Morning_Mood_%28Musopen_Symphony%29.flac")
+# All CC0 (no rights reserved, no attribution needed); see docs/licence-log.md for the source pages.
+SORROW = "sad_dad.mp3"                       # John Bartmann, "Sad Dad" (Free Music Archive, CC0)
+DRIVE = "hardcore_orchestral_dubstep.mp3"    # John Bartmann, "Hardcore Orchestral Dubstep" (FMA, CC0)
+HIT = "braam.flac"                           # unfa, cinematic braam (Wikimedia Commons, CC0)
 
 
-def load(track: tuple[str, str]) -> np.ndarray:
-    """Stereo float samples at SR, downloading the public-domain file once."""
-    import urllib.request
-
-    path = MUSIC_DIR / track[0]
+def load(name: str) -> np.ndarray:
+    """Stereo float samples at SR."""
+    path = MUSIC_DIR / name
     if not path.exists():
-        MUSIC_DIR.mkdir(parents=True, exist_ok=True)
-        req = urllib.request.Request(track[1], headers={"User-Agent": "helper-in-law-film/1.0"})
-        path.write_bytes(urllib.request.urlopen(req, timeout=300).read())
+        raise FileNotFoundError(f"{path}: fetch it from the source listed in docs/licence-log.md")
     raw = subprocess.run([FF, "-loglevel", "error", "-i", str(path), "-ac", "2", "-ar", str(SR), "-f", "f32le", "-"],
                          capture_output=True, check=True).stdout
     return np.frombuffer(raw, dtype="<f4").reshape(-1, 2).astype(np.float64)
@@ -360,35 +355,50 @@ def rms(x: np.ndarray) -> float:
     return float(np.sqrt(np.mean(x**2)) + 1e-9)
 
 
-def music_bed(total: float, turn: float, dawn_from: float, xfade: float = 1.8) -> np.ndarray:
-    """Grief until `turn` (The Death of Aase, from its opening), then dawn (Morning Mood from
-    `dawn_from` s), crossfaded across the turn. The grief sits ~4 dB under the dawn."""
-    n, n_turn, nx = int(total * SR), int(turn * SR), int(xfade * SR)
-    sorrow = load(SORROW)[: n_turn + nx]
-    dawn = load(DAWN)[int(dawn_from * SR):][: n - n_turn + nx]
-    dawn = np.pad(dawn, ((0, max(0, n - n_turn + nx - len(dawn))), (0, 0)))
-    sorrow *= (0.7 * rms(dawn[: 10 * SR])) / rms(sorrow)  # just under the first light, not the climax
-    out = np.zeros((n + nx, 2))
-    out[: len(sorrow)] += sorrow * np.clip((len(sorrow) - np.arange(len(sorrow)))[:, None] / nx, 0, 1)
-    fade_in = np.clip(np.arange(len(dawn))[:, None] / nx, 0, 1)
-    out[n_turn - nx // 2 : n_turn - nx // 2 + len(dawn)] += (dawn * fade_in)[: n + nx - (n_turn - nx // 2)]
-    return out[:n]
+def music_bed(total: float, turn: float, drive_from: float = 0.0) -> np.ndarray:
+    """The trailer cut: the sombre piece fades to near-silence just before `turn`, a braam hits on
+    the turn, and the driving track drops in on it. A hard cut, not a crossfade, so two different
+    pieces never play over each other."""
+    n, n_turn = int(total * SR), int(turn * SR)
+    out = np.zeros((n, 2))
+    drive = load(DRIVE)[int(drive_from * SR):][: n - n_turn]
+    sorrow = load(SORROW)[:n_turn]
+    sorrow *= 0.35 * rms(drive) / rms(sorrow)  # about 9 dB under the drop: the lift is felt
+    tail = int(0.9 * SR)  # breathe out before the hit
+    sorrow[-tail:] *= (np.linspace(1, 0, tail) ** 2)[:, None]
+    out[: len(sorrow)] += sorrow
+    rise = int(0.04 * SR)  # the drop lands with a tiny ramp so it doesn't click
+    drive[:rise] *= np.linspace(0, 1, rise)[:, None]
+    out[n_turn : n_turn + len(drive)] += drive
+    hit = load(HIT)
+    hit *= 0.9 * rms(drive) / rms(hit[: int(0.5 * SR)])
+    at = n_turn - int(0.03 * SR)
+    out[at : at + len(hit)] += hit[: n - at]
+    return out
+
+
+def smooth(x: np.ndarray, win: int) -> np.ndarray:
+    """Centred moving average in O(n) (np.convolve is O(n*win): minutes on a full track)."""
+    c = np.concatenate([[0.0], np.cumsum(x, dtype=np.float64)])
+    half = win // 2
+    idx = np.arange(len(x))
+    lo, hi = np.clip(idx - half, 0, len(x)), np.clip(idx + half + 1, 0, len(x))
+    return (c[hi] - c[lo]) / (hi - lo)
 
 
 def compress(sig: np.ndarray, threshold_db: float = -24.0, ratio: float = 3.0) -> np.ndarray:
     """Gentle broadcast-style compression so quiet passages stay audible next to the climax."""
     mono = np.abs(sig).mean(axis=1) if sig.ndim == 2 else np.abs(sig)
     win = int(0.08 * SR)
-    level = np.sqrt(np.convolve(mono**2, np.ones(win) / win, "same")) + 1e-9
+    level = np.sqrt(smooth(mono**2, win)) + 1e-9
     thr = 10 ** (threshold_db / 20) * mono.max()
     gain = np.where(level > thr, (thr / level) ** (1 - 1 / ratio), 1.0)
-    gain = np.convolve(gain, np.ones(win) / win, "same")  # smooth: no pumping clicks
+    gain = smooth(gain, win)  # no pumping clicks
     return sig * (gain[:, None] if sig.ndim == 2 else gain)
 
 
 def finish(sig: np.ndarray, peak: float = 0.89) -> np.ndarray:
-    """Compress, fade in/out and normalise. No saturation: these are real recordings."""
-    sig = compress(sig)
+    """Fade in/out and normalise. No saturation: these are real, mastered recordings."""
     n = len(sig)
     fade = np.clip(np.arange(n) / (0.5 * SR), 0, 1) * np.clip((n - np.arange(n)) / (3.0 * SR), 0, 1)
     sig = sig * (fade[:, None] if sig.ndim == 2 else fade)
