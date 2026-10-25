@@ -59,6 +59,7 @@ SCHEMA: dict[str, Any] = {
 }
 
 MAX_CLAIMS = 8
+GOVERNING = 2  # provisions quoted per answer
 LLM_SOURCES = 5  # prompt size drives latency on small local models
 SECTION_TYPE = {"holding": "holding", "reasoning": "ratio", "facts": "fact", "provision": "statute"}
 SECTION_WEIGHT = {"facts": 0.6}  # prefer what the court held over the story
@@ -97,7 +98,10 @@ def extractive_claims(store: Store, question: str, sources: list[Source]) -> Cla
     by construction; the verifier still checks it."""
     q = content_terms(question)
     scored: list[tuple[float, Claim]] = []
+    governing = provision_claims(q, [s for s in sources if is_provision(s.chunk.case_id)][:GOVERNING])
     for src in sources:
+        if is_provision(src.chunk.case_id):
+            continue
         sections = {
             p.n: p.section
             for p in store.get_paragraphs(src.chunk.case_id, src.chunk.para_from, src.chunk.para_to)
@@ -124,9 +128,24 @@ def extractive_claims(store: Store, question: str, sources: list[Source]) -> Cla
                     )
                 )
     scored.sort(key=lambda x: -x[0])
-    if not scored:
+    if not scored and not governing:
         return ClaimSet(
             abstain=True, gaps=["No sentence in the retrieved judgments matches the question."]
         )
-    best = scored[0][0]
-    return ClaimSet(claims=[c for s, c in scored[:MAX_CLAIMS] if s >= best * 0.5])
+    best = scored[0][0] if scored else 0.0
+    judgments = [c for s, c in scored[: MAX_CLAIMS - len(governing)] if s >= best * 0.5]
+    return ClaimSet(claims=governing + judgments)
+
+
+def provision_claims(q: set[str], sources: list[Source]) -> list[Claim]:
+    """The clause of each governing Article that best fits the situation. A provision earns its
+    place through retrieval and the precedent vote, so it speaks even when the lawyer's words
+    and the Article's words don't overlap ("tortured in custody" vs "personal liberty")."""
+    out = []
+    for src in sources:
+        sents = [s for _, para in paragraphs_of(src.chunk.text) for s in sentences(para) if len(s.split()) >= 6]
+        if not sents:
+            continue
+        sent = max(sents, key=lambda s: len(q & content_terms(s)))  # ties keep the first clause
+        out.append(Claim(text=sent, type="statute", support=[SupportRef(source_id=src.id, quote=sent)]))
+    return out
