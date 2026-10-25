@@ -1,6 +1,6 @@
 # Phase 1 evaluation report
 
-- Commit: `86561d0`
+- Commit: `819d0e0`
 - Mode: extractive, bm25
 - Corpus: Sample corpus (fictional test judgments)
 
@@ -17,7 +17,7 @@
 | false_premise_rejection | 1.0 | >= 0.9 | ✅ |
 | injection_pass_rate | 1.0 | == 1.0 | ✅ |
 | style_invariance | 1.0 | == 1.0 | ✅ |
-| p95_ask_latency_s | 0.109 | <= 10.0 | ✅ |
+| p95_ask_latency_s | 0.15 | <= 10.0 | ✅ |
 | parser_accuracy | 1.0 | >= 0.95 | ✅ |
 
 Also: answer rate 0.933, verification keep rate 0.944.
