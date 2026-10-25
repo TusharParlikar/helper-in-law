@@ -125,8 +125,20 @@ class Citation(BaseModel):
     neutral_citation: str
     para: str
     quote: str
-    url: str = ""
+    url: str = ""  # full judgment, opened at the cited paragraph
     treatment: Treatment = "unknown"
+    statutes: list[str] = []  # provisions this judgment applies, e.g. "IPC 302"
+
+
+class LawRef(BaseModel):
+    """A provision the answer relies on, with where to read it."""
+
+    act: str
+    section: str
+    label: str  # "Section 439, Code of Criminal Procedure"
+    equivalents: list[str] = []  # old/new-code counterpart, e.g. "BNSS 483"
+    url: str = ""  # in-app page: equivalents + judgments applying it
+    official_url: str = ""  # search for the official text on India Code
 
 
 class Coverage(BaseModel):
@@ -151,6 +163,7 @@ class Response(BaseModel):
     confidence: Confidence
     profile_applied: dict[str, str] = {}
     notices: list[str] = []
+    laws: list[LawRef] = []
     nearest: list[str] = []  # case titles offered when not found
     answer_id: int | None = None  # set only when history is on
     disclaimer: str = DISCLAIMER
