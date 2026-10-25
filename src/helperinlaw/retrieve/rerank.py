@@ -11,7 +11,7 @@ from helperinlaw.retrieve.understand import Query, terms
 
 
 def stem(t: str) -> str:
-    return t[:6]
+    return t[:5]
 
 
 def coverage(query: str, text: str) -> float:
