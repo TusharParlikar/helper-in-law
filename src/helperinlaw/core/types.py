@@ -151,6 +151,8 @@ class Response(BaseModel):
     confidence: Confidence
     profile_applied: dict[str, str] = {}
     notices: list[str] = []
+    nearest: list[str] = []  # case titles offered when not found
+    answer_id: int | None = None  # set only when history is on
     disclaimer: str = DISCLAIMER
 
     @model_validator(mode="after")
