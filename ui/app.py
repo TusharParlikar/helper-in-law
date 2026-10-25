@@ -1,87 +1,79 @@
 """Streamlit UI: uv run streamlit run ui/app.py  (needs the "ui" extra).
 
-Every link goes to the API's readable pages (judgment at the cited paragraph, statute pages),
-so keep `python -m helperinlaw.api` running alongside."""
+Judgment links open the API's reader pages, so keep `python -m helperinlaw.api` running too."""
 
 from html import escape
 
 import streamlit as st
-from art import hero_scales, pattern
+from art import colonnade, mark
 
 from helperinlaw.core.config import Settings
-from helperinlaw.core.types import Filters, Response
+from helperinlaw.core.types import Citation, Filters, Response
 from helperinlaw.service import Service
 
-st.set_page_config(page_title="Helper in Law", page_icon="⚖️", layout="wide")
+st.set_page_config(page_title="Helper in Law", page_icon="⚖", layout="wide",
+                   initial_sidebar_state="collapsed")
 
 st.markdown(
     f"""
 <style>
-.stApp {{
-  background:
-    radial-gradient(1200px 600px at 85% -10%, rgba(232,185,74,.16), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgba(224,122,63,.10), transparent 60%),
-    url("{pattern()}"), #0B1020;
-  background-attachment: fixed;
-}}
-.block-container {{ padding-top: 2rem; max-width: 1200px; }}
-.hero {{ display:flex; align-items:center; justify-content:space-between; gap:24px;
-  padding: 28px 36px; border-radius: 28px; margin-bottom: 18px;
-  background: linear-gradient(135deg, rgba(21,27,48,.92), rgba(11,16,32,.75));
-  border: 1px solid rgba(232,185,74,.25); box-shadow: 0 20px 60px rgba(0,0,0,.35); }}
-.hero h1 {{ font-size: 3rem; margin: 0; letter-spacing: -.02em; line-height:1.05; }}
-.hero h1 span {{ background: linear-gradient(90deg,#FFD27A,#E07A3F); -webkit-background-clip:text;
-  background-clip:text; color: transparent; }}
-.hero p {{ color:#A1A1AA; font-size:1.1rem; margin:.5rem 0 0; }}
-.hero img {{ width: 170px; filter: drop-shadow(0 8px 24px rgba(232,185,74,.35)); }}
-div[data-testid="stForm"] {{ border:none; padding:0; }}
-div[data-testid="stTextInput"] input {{ border-radius: 999px !important; padding: 18px 26px !important;
-  font-size: 1.1rem !important; background: rgba(255,255,255,.06) !important;
-  border: 1px solid rgba(232,185,74,.35) !important; }}
-div[data-testid="stTextInput"] div[data-baseweb="input"] {{ border-radius: 999px !important;
-  background: transparent !important; border: none !important; }}
-div[data-testid="stTextInput"] input:focus {{ border-color:#E8B94A !important;
-  box-shadow: 0 0 0 4px rgba(232,185,74,.18) !important; }}
-.stButton button {{ border-radius: 999px !important; }}
-div[data-testid="stFormSubmitButton"] button {{ height: 58px; border-radius: 999px !important;
-  font-weight: 700; font-size: 1.05rem; border: none !important; color:#141414 !important;
-  background: linear-gradient(90deg,#FFD27A,#E07A3F) !important;
-  box-shadow: 0 8px 24px rgba(232,185,74,.25); transition: transform .15s; }}
-div[data-testid="stFormSubmitButton"] button:hover {{ transform: translateY(-1px) scale(1.02); }}
-.card {{ background: rgba(21,27,48,.85); border:1px solid rgba(255,255,255,.08); border-radius: 20px;
-  padding: 18px 20px; margin: 10px 0; backdrop-filter: blur(6px); transition: border-color .2s; }}
-.card:hover {{ border-color: rgba(232,185,74,.35); }}
-.answer {{ font-size: 1.07rem; line-height: 1.65; border-left: 3px solid #E8B94A; }}
-.cite {{ display:inline-block; margin-left:6px; padding:1px 9px; border-radius:999px; font-size:.8rem;
-  background: rgba(232,185,74,.16); color:#FFD27A !important; text-decoration:none !important; }}
-.cite:hover {{ background:#E8B94A; color:#141414 !important; }}
-.src h4 {{ margin:0 0 4px; font-size:1.02rem; }}
-.src h4 a {{ color:#ECECF1 !important; text-decoration:none; }}
-.src h4 a:hover {{ color:#FFD27A !important; }}
-.meta {{ color:#A1A1AA; font-size:.85rem; }}
-blockquote.q {{ margin:10px 0; padding:8px 14px; border-left:3px solid rgba(232,185,74,.6);
-  color:#D4D4D8; font-style: italic; background: rgba(255,255,255,.03); border-radius: 0 12px 12px 0; }}
-.chip {{ display:inline-block; margin:6px 6px 0 0; padding:3px 11px; border-radius:999px; font-size:.8rem;
-  background: rgba(255,255,255,.07); color:#ECECF1 !important; text-decoration:none !important;
-  border:1px solid rgba(255,255,255,.1); }}
-.chip:hover {{ border-color:#E8B94A; color:#FFD27A !important; }}
-.badge {{ display:inline-block; padding:4px 12px; border-radius:999px; font-weight:600; font-size:.85rem;
-  margin: 0 8px 6px 0; }}
-.b-high {{ background:rgba(48,209,88,.18); color:#5BE584; }}
-.b-medium {{ background:rgba(255,214,10,.16); color:#FFD60A; }}
-.b-low {{ background:rgba(255,159,10,.18); color:#FFB340; }}
-.b-not_found {{ background:rgba(255,255,255,.1); color:#D4D4D8; }}
-.b-bad {{ background:rgba(255,69,58,.2); color:#FF6961; }}
-.b-ok {{ background:rgba(232,185,74,.14); color:#FFD27A; }}
-.law {{ border-left: 3px solid #E07A3F; }}
-.empty {{ text-align:center; padding: 34px; }}
-.empty h3 {{ margin:.2rem 0; }}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap');
+:root {{ --navy:#1F3A5F; --ink:#1C1F23; --muted:#5F6B7A; --line:#E3E6EA; --soft:#F7F8FA; --gold:#B08D57; }}
+html, body, .stApp, [class*="css"] {{ font-family: Inter, system-ui, sans-serif; color: var(--ink); }}
+.stApp {{ background: #FFFFFF; }}
+header[data-testid="stHeader"] {{ background: transparent; }}
+.block-container {{ max-width: 1120px; padding-top: 1.2rem; }}
+h1, h2, h3, .serif {{ font-family: 'Source Serif 4', Georgia, serif !important; letter-spacing: -.01em; }}
+.topbar {{ display:flex; align-items:center; justify-content:space-between; padding: 6px 0 18px;
+  border-bottom: 1px solid var(--line); margin-bottom: 28px; }}
+.brand {{ display:flex; align-items:center; gap:12px; font-family:'Source Serif 4',Georgia,serif;
+  font-size: 1.45rem; font-weight:600; color: var(--navy); }}
+.status {{ color: var(--muted); font-size: .85rem; }}
+.status b {{ color: var(--ink); font-weight: 600; }}
+.hero {{ padding: 26px 0 8px; background: url("{colonnade()}") no-repeat right -40px top -30px / 560px auto; }}
+.hero h1 {{ font-size: 2.6rem; line-height: 1.12; margin: 0 0 12px; color: var(--ink); max-width: 720px; }}
+.hero p {{ color: var(--muted); font-size: 1.08rem; max-width: 640px; margin: 0 0 6px; }}
+div[data-testid="stForm"] {{ border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px 6px;
+  background: #fff; box-shadow: 0 10px 30px rgba(16,24,40,.06); }}
+div[data-testid="stTextArea"] textarea {{ border-radius: 14px !important; font-size: 1.02rem !important;
+  line-height: 1.55 !important; padding: 14px 16px !important; background: var(--soft) !important;
+  border: 1px solid var(--line) !important; }}
+div[data-testid="stTextArea"] textarea:focus {{ border-color: var(--navy) !important;
+  box-shadow: 0 0 0 3px rgba(31,58,95,.12) !important; }}
+div[data-testid="stFormSubmitButton"] button {{ border-radius: 999px !important; height: 46px;
+  padding: 0 28px !important; font-weight: 600; background: var(--navy) !important; color: #fff !important;
+  border: none !important; }}
+div[data-testid="stFormSubmitButton"] button:hover {{ background: #173052 !important; }}
+.stButton button, div[data-testid="stPopover"] button {{ border-radius: 999px !important; }}
+.label {{ text-transform: uppercase; letter-spacing: .08em; font-size: .72rem; font-weight: 600;
+  color: var(--muted); margin: 26px 0 10px; }}
+.summary {{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding: 14px 18px;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--soft); margin: 18px 0 4px; }}
+.pill {{ display:inline-block; padding: 3px 12px; border-radius: 999px; font-size: .8rem; font-weight: 600; }}
+.p-high {{ background:#E6F4EA; color:#1E7B3A; }} .p-medium {{ background:#FFF4D6; color:#8A5A00; }}
+.p-low {{ background:#FDE7E2; color:#A33A1F; }} .p-not_found {{ background:#ECEEF1; color:#4A5361; }}
+.p-neutral {{ background:#ECEEF1; color:#4A5361; }} .p-bad {{ background:#FDE7E2; color:#A33A1F; }}
+.sumtext {{ color: var(--muted); font-size: .9rem; }}
+.card {{ border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin: 10px 0;
+  background: #fff; transition: box-shadow .15s, border-color .15s; }}
+.card:hover {{ border-color: #C9CFD6; box-shadow: 0 6px 18px rgba(16,24,40,.06); }}
+.prov {{ border-left: 4px solid var(--gold); }}
+.prov h4, .case h4 {{ font-family:'Source Serif 4',Georgia,serif; font-size: 1.12rem; margin: 0 0 4px; color: var(--ink); }}
+.meta {{ color: var(--muted); font-size: .84rem; }}
+blockquote {{ margin: 12px 0 10px; padding: 2px 0 2px 14px; border-left: 2px solid var(--line);
+  color: #2B3138; font-family:'Source Serif 4',Georgia,serif; font-size: 1.02rem; line-height: 1.6; }}
+.links a {{ display:inline-block; margin: 2px 16px 0 0; font-size: .86rem; font-weight: 500;
+  color: var(--navy) !important; text-decoration: none !important; border-bottom: 1px solid rgba(31,58,95,.25); }}
+.links a:hover {{ border-color: var(--navy); }}
+.point {{ display:flex; gap:12px; padding: 12px 0; border-bottom: 1px solid var(--line); line-height: 1.6; }}
+.point:last-child {{ border-bottom: none; }}
+.num {{ color: var(--gold); font-weight: 600; min-width: 22px; }}
+sup a {{ color: var(--navy) !important; text-decoration: none !important; font-weight: 600; font-size: .72rem;
+  padding: 0 3px; }}
+.empty {{ text-align:center; padding: 40px 20px; color: var(--muted); }}
+.empty h3 {{ color: var(--ink); margin-bottom: 6px; }}
+.foot {{ color: var(--muted); font-size: .8rem; border-top: 1px solid var(--line); margin-top: 36px; padding-top: 14px; }}
 </style>
-<div class="hero">
-  <div><h1>Helper <span>in Law</span></h1>
-  <p>Research over Indian court judgments. Every claim verified against the source, or not shown.</p></div>
-  <img src="{hero_scales()}" alt="Scales of justice">
-</div>
 """,
     unsafe_allow_html=True,
 )
@@ -92,294 +84,219 @@ def service(use_llm: bool) -> Service:
     return Service(cfg=Settings(use_llm=use_llm))
 
 
-EXAMPLES = [
-    "Can bail be refused because the accused may tamper with witnesses?",
-    "Is a 65B certificate mandatory for electronic evidence?",
-    "What does soon before her death mean in dowry death cases?",
-    "When is murder reduced to culpable homicide in a sudden fight?",
-    "Can a wife capable of earning be denied maintenance under Section 125 CrPC?",
-    "What does Section 103 BNS correspond to?",
-    "What is the punishment for sedition under Section 124A IPC?",
-]
-ACT_LABEL = {"IEA": "Evidence Act (IEA)", "CONST": "Constitution"}
+SCENARIOS = {
+    "Arrest without grounds": "My client was arrested at night by the police and kept in custody for two days. "
+    "He was not told why he was arrested and was not allowed to call a lawyer.",
+    "Elderly parent's dignity": "My client is an 80-year-old widow with no income, abandoned by her children. "
+    "The State has no old age home or pension scheme in her district. Can she claim a right to live with dignity?",
+    "Unequal treatment in a scheme": "A state scheme gives benefits to one group of employees but excludes another "
+    "group doing identical work, with no reason given. My client wants to challenge it.",
+    "Temple entry ban": "Women of a certain age group are barred by custom from entering a public temple. "
+    "My client wants to challenge the ban as unconstitutional.",
+    "Speech restriction": "My client posted criticism of a government policy online and the authorities "
+    "ordered the post removed and threatened action. Is her freedom of speech protected?",
+}
 
-with st.sidebar:
-    st.markdown("### ⚙️ Answer style")
-    use_llm = st.toggle(
-        "Use local AI (Ollama)",
-        value=True,
-        help="Off = instant, verbatim quotes only. On = qwen3 drafts claims; every one is verified.",
-    )
-    svc = service(use_llm)
-    p = svc.get_profile()
-    tone = st.radio(
-        "Tone",
-        ["technical", "plain", "new"],
-        horizontal=True,
-        index=["technical", "plain", "new"].index(p.tone),
-        format_func={"technical": "Technical", "plain": "Plain", "new": "New to law"}.get,
-    )
-    styles = ["case_name", "neutral", "inline_para", "footnotes"]
-    cstyle = st.selectbox("Citation style", styles, index=styles.index(p.citation_style))
-    contrary = st.toggle("Show contrary authority", value=p.contrary_authority != "never")
-    history = st.toggle("Save my history", value=p.history_opt_in)
-    if st.button("💾 Save as default", use_container_width=True):
-        svc.update_profile(
-            "default",
-            {
-                "tone": tone,
-                "citation_style": cstyle,
-                "history_opt_in": history,
-                "contrary_authority": "always" if contrary else "never",
-            },
-        )
-        st.toast("Saved your answer style", icon="✅")
-    st.markdown("### 🔎 Filters")
-    court = st.selectbox(
-        "Court", ["Any", "SC", "Delhi HC", "Bombay HC", "Kerala HC", "Karnataka HC"]
-    )
-    years = st.slider("Years", 2010, 2025, (2010, 2025))
-    st.caption("Corpus: 8 fictional sample judgments. Research aid, not legal advice.")
-
-filters = Filters(
-    court=None if court == "Any" else court,
-    year_from=years[0] if years[0] > 2010 else None,
-    year_to=years[1] if years[1] < 2025 else None,
-)
 ss = st.session_state
 ss.setdefault("q", "")
-ss.setdefault("history", [])
+
+top_l, top_r = st.columns([3, 2], vertical_alignment="center")
+with top_r:
+    s1, s2 = st.columns([3, 1], vertical_alignment="center")
+    with s2.popover("Settings", use_container_width=True):
+        use_llm = st.toggle("AI drafting (Ollama)", value=False,
+                            help="Off: verbatim passages, instant. On: the local model drafts the analysis; "
+                                 "every statement is still checked against the source before it is shown.")
+        detail = st.segmented_control("Detail", ["quick", "standard", "deep"], default="standard",
+                                      format_func={"quick": "Brief", "standard": "Standard", "deep": "Detailed"}.get)
+        layout = st.segmented_control("Format", ["bullets", "irac", "memo"], default="bullets",
+                                      format_func={"bullets": "Points", "irac": "IRAC", "memo": "Memo"}.get)
+        tone = st.segmented_control("Language", ["technical", "plain"], default="technical",
+                                    format_func={"technical": "Legal", "plain": "Plain"}.get)
+        years = st.slider("Judgments from", 1950, 2025, (1950, 2025))
+svc = service(use_llm)
+cov = svc.coverage()
+with top_l:
+    st.markdown(f"<div class='brand'><img src='{mark()}' height='34'>Helper in Law</div>", unsafe_allow_html=True)
+s1.markdown(f"<div class='status' style='text-align:right'><b>Indexed</b> · {escape(cov.corpus)}</div>",
+            unsafe_allow_html=True)
+st.markdown("<div style='border-bottom:1px solid var(--line);margin:4px 0 8px'></div>", unsafe_allow_html=True)
+
+research, lookup = st.tabs(["Research", "Constitution lookup"])
 
 
-def badges(r: Response) -> str:
-    v = r.verification
-    label = {
-        "high": "High confidence",
-        "medium": "Medium confidence",
-        "low": "Low confidence",
-        "not_found": "Not found",
-    }[r.confidence]
-    mode = {
-        "synthesised": "AI-drafted, verified",
-        "extractive": "Verbatim quotes",
-        "abstained": "Abstained",
-    }
-    return (
-        f"<span class='badge b-{r.confidence}'>{label}</span>"
-        f"<span class='badge b-ok'>✓ {v.verified}/{v.claims_proposed} claims verified</span>"
-        f"<span class='badge b-not_found'>{mode[v.mode]}</span>"
+def link(label: str, url: str) -> str:
+    return f"<a href='{escape(url)}' target='_blank' rel='noopener'>{escape(label)}</a>"
+
+
+def quotes(cs: list[Citation], refs: dict[str, int]) -> str:
+    return "".join(
+        f"<blockquote><span class='meta'>[{refs[c.id]}]{' ¶ ' + c.para if c.kind == 'judgment' else ''}"
+        f"</span> {escape(c.quote)}</blockquote>"
+        for c in cs
     )
 
 
-def chip(label: str, url: str) -> str:
-    return f"<a class='chip' href='{escape(url)}' target='_blank'>{escape(label)}</a>"
+def provision_card(cs: list[Citation], refs: dict[str, int]) -> str:
+    c = cs[0]
+    art = c.citation.removeprefix("Art. ")
+    return (
+        f"<div class='card prov'><h4>{escape(c.case_title)}</h4>"
+        f"<div class='meta'>{escape(c.neutral_citation)}</div>{quotes(cs, refs)}"
+        f"<div class='links'>{link('Official text, exact page ↗', c.url)}"
+        f"{link('Judgments applying it ↗', f'{svc.cfg.public_url}/statutes/CONST/{art}/view')}</div>"
+        f"<div class='meta' style='margin-top:8px'>Source: {escape(c.source)}</div></div>"
+    )
 
 
-def render(r: Response, key: str) -> None:
-    st.markdown(badges(r), unsafe_allow_html=True)
+def judgment_card(cs: list[Citation], refs: dict[str, int]) -> str:
+    c = cs[0]
+    pdf = svc.store.get_case(c.case_id)
+    flag = "<span class='pill p-bad'>Overruled</span> " if c.treatment == "overruled" else ""
+    arts = ", ".join(x.replace("CONST ", "Art. ") for x in c.statutes if x.startswith("CONST"))[:80]
+    return (
+        f"<div class='card case'>{flag}<h4>{escape(c.case_title)}</h4>"
+        f"<div class='meta'>{escape(c.court)} · {escape(c.date)} · {escape(c.citation)}"
+        f"{' · ' + escape(c.neutral_citation) if c.neutral_citation else ''}</div>{quotes(cs, refs)}"
+        f"<div class='links'>{link(f'Read judgment at ¶ {c.para} ↗', c.url)}"
+        f"{link('Original PDF ↗', pdf.url) if pdf and pdf.url else ''}</div>"
+        f"<div class='meta' style='margin-top:8px'>{'Applies ' + escape(arts) + ' · ' if arts else ''}"
+        f"Source: {escape(c.source)}</div></div>"
+    )
+
+
+def by_case(cs: list[Citation]) -> list[list[Citation]]:
+    """One card per document, holding every passage quoted from it."""
+    grouped: dict[str, list[Citation]] = {}
+    for c in cs:
+        grouped.setdefault(c.case_id, []).append(c)
+    return list(grouped.values())
+
+
+def render(r: Response) -> None:
     v = r.verification
-    if v.claims_proposed:
-        st.progress(
-            v.verified / v.claims_proposed, text="Checked: quote · numbers · meaning · names"
-        )
+    conf = {"high": "High confidence", "medium": "Moderate confidence", "low": "Review carefully",
+            "not_found": "No support found"}[r.confidence]
+    mode = {"synthesised": "AI-drafted, then verified", "extractive": "Verbatim from sources",
+            "abstained": "No answer given"}[v.mode]
+    st.markdown(
+        f"<div class='summary'><span class='pill p-{r.confidence}'>{conf}</span>"
+        f"<span class='sumtext'>{v.verified} of {v.claims_proposed} statements verified against the source text"
+        f" · {mode}</span></div>",
+        unsafe_allow_html=True,
+    )
     for n in r.notices:
-        if "overruled" in n.lower() or "conflict" in n.lower():
-            st.warning(n, icon="⚠️")
-        else:
-            st.info(n, icon="ℹ️")
+        (st.warning if "overruled" in n.lower() or "conflict" in n.lower() else st.info)(n)
     if r.confidence == "not_found":
-        near = "".join(f"<span class='chip'>{escape(t)}</span>" for t in r.nearest)
         st.markdown(
-            "<div class='card empty'><div style='font-size:2.4rem'>🔍</div>"
-            "<h3>Not found in the indexed judgments</h3><div class='meta'>Helper in Law doesn't "
-            f"guess. Closest judgments:</div>{near}</div>",
+            "<div class='card empty'><h3>Nothing in the indexed sources supports an answer</h3>"
+            "Helper in Law does not guess. Try describing the facts differently, or widen the year range."
+            + (f"<br><br>Closest documents: {escape('; '.join(r.nearest))}" if r.nearest else "")
+            + "</div>",
             unsafe_allow_html=True,
         )
         return
     cites = {c.id: c for c in r.citations}
-    left, right = st.columns([3, 2], gap="large")
-    with left:
-        st.markdown("#### Answer")
-        for b in r.answer_blocks:
-            links = "".join(
-                f"<a class='cite' href='{escape(cites[i].url)}' target='_blank' "
-                f"title='Open {escape(cites[i].case_title)} at para {cites[i].para}'>{i} ↗</a>"
-                for i in b.citation_ids
-            )
-            st.markdown(
-                f"<div class='card answer'>{escape(b.text)}{links}</div>", unsafe_allow_html=True
-            )
-        if r.laws:
-            st.markdown("#### Laws referenced")
-            for law in r.laws:
-                eq = f" · counterpart: {', '.join(law.equivalents)}" if law.equivalents else ""
-                st.markdown(
-                    f"<div class='card law'><b>{escape(law.label)}</b>"
-                    f"<span class='meta'>{escape(eq)}</span><br>"
-                    + chip("Judgments applying it ↗", law.url)
-                    + chip("Official text on India Code ↗", law.official_url)
-                    + "</div>",
-                    unsafe_allow_html=True,
-                )
-        st.markdown("<div class='meta'>Was this useful?</div>", unsafe_allow_html=True)
-        fb = st.feedback("thumbs", key=f"fb-{key}")
-        if fb is not None and not ss.get(f"sent-{key}"):
+    provisions = [c for c in r.citations if c.kind == "provision"]
+    judgments = [c for c in r.citations if c.kind == "judgment"]
+    order = {c.id: i + 1 for i, c in enumerate(provisions + judgments)}
+    if provisions:
+        st.markdown("<div class='label'>Constitutional provisions</div>", unsafe_allow_html=True)
+        groups = by_case(provisions)
+        cols = st.columns(min(2, len(groups)))
+        for i, g in enumerate(groups):
+            cols[i % len(cols)].markdown(provision_card(g, order), unsafe_allow_html=True)
+    st.markdown("<div class='label'>Analysis</div>", unsafe_allow_html=True)
+    points = "".join(
+        f"<div class='point'><span class='num'>{i + 1}</span><div>{escape(b.text.removeprefix('- '))}"
+        + "".join(f"<sup>{link(f'[{order[x]}]', cites[x].url)}</sup>" for x in b.citation_ids)
+        + "</div></div>"
+        for i, b in enumerate(r.answer_blocks)
+    )
+    st.markdown(f"<div class='card'>{points}</div>", unsafe_allow_html=True)
+    if judgments:
+        st.markdown("<div class='label'>Supporting judgments</div>", unsafe_allow_html=True)
+        for g in by_case(judgments):
+            st.markdown(judgment_card(g, order), unsafe_allow_html=True)
+    fb_l, _ = st.columns([1, 3])
+    with fb_l:
+        fb = st.feedback("thumbs", key=f"fb-{hash(ss.q)}")
+        if fb is not None and not ss.get(f"sent-{hash(ss.q)}"):
             svc.feedback(r.answer_id or 0, 1 if fb == 1 else -1, "" if fb == 1 else "unhelpful")
-            ss[f"sent-{key}"] = True
-            st.toast("Thanks, feedback saved", icon="🙏")
-    with right:
-        st.markdown("#### Sources")
-        for c in r.citations:
-            bad = c.treatment == "overruled"
-            status = (
-                f"<span class='badge {'b-bad' if bad else 'b-ok'}'>{escape(c.treatment)}</span>"
-            )
-            laws = "".join(
-                chip(x, f"{svc.cfg.public_url}/statutes/{x.replace(' ', '/')}/view")
-                for x in c.statutes
-            )
-            st.markdown(
-                f"<div class='card src'><span class='cite'>{c.id}</span> {status}"
-                f"<h4><a href='{escape(c.url)}' target='_blank'>{escape(c.case_title)} ↗</a></h4>"
-                f"<div class='meta'>{escape(c.court)} · {escape(c.date)} · {escape(c.citation)} · "
-                f"para {c.para}</div><blockquote class='q'>“{escape(c.quote)}”</blockquote>{laws}</div>",
-                unsafe_allow_html=True,
-            )
-    with st.expander("What this answer can't promise"):
-        for lim in r.coverage.limits:
-            st.write("• " + lim)
-        st.caption(f"{r.coverage.corpus}, as of {r.coverage.as_of}. {r.disclaimer}")
-
-
-tab_ask, tab_browse, tab_law = st.tabs(["⚖️  Ask", "📚  Browse judgments", "📜  Statutes"])
-
-with tab_ask:
-    with st.form("ask", border=False):
-        c1, c2 = st.columns([6, 1], vertical_alignment="bottom")
-        typed = c1.text_input(
-            "Question",
-            value=ss.q,
-            label_visibility="collapsed",
-            placeholder="Ask a legal research question…  e.g. grounds for refusing bail",
-        )
-        if c2.form_submit_button("Ask  ⚖️", use_container_width=True):
-            ss.q = typed.strip()
-    recent = [h for h in ss.history if h not in EXAMPLES][-3:]
-    pick = st.pills("Try one", EXAMPLES + recent, key="pick", label_visibility="collapsed")
-    if pick and pick != ss.get("last_pick"):
-        ss.last_pick = pick
-        ss.q = pick
-        st.rerun()
-    if ss.q:
-        d1, d2 = st.columns(2)
-        depth = d1.segmented_control(
-            "Depth",
-            ["quick", "standard", "deep"],
-            default="standard",
-            format_func=str.title,
-            key="depth",
-        )
-        structure = d2.segmented_control(
-            "Layout",
-            ["bullets", "paragraphs", "irac", "memo", "table"],
-            default="bullets",
-            key="structure",
-            format_func=lambda s: {"irac": "IRAC"}.get(s, s.title()),
-        )
-        style = {
-            "depth": depth or "standard",
-            "structure": structure or "bullets",
-            "tone": tone,
-            "citation_style": cstyle,
-            "contrary_authority": "always" if contrary else "never",
-        }
-        with st.spinner("Searching judgments · checking every quote against its paragraph…"):
-            resp = svc.ask(ss.q, filters, style)
-        if ss.q not in ss.history:
-            ss.history.append(ss.q)
-        render(resp, ss.q)
-    else:
-        st.markdown(
-            "<div class='card empty'><div style='font-size:2.4rem'>⚖️</div><h3>Ask anything about the "
-            "indexed judgments</h3><div class='meta'>Press Enter or click Ask, or pick a question above. "
-            "After answering, switch Depth and Layout: the verified facts stay identical.</div></div>",
-            unsafe_allow_html=True,
-        )
-
-with tab_browse:
-    cases = svc.list_cases()
-    cols = st.columns(2)
-    for i, c in enumerate(cases):
-        bad = c["treatment"] == "overruled"
-        cols[i % 2].markdown(
-            f"<div class='card src'><h4><a href='{escape(c['url'])}' target='_blank'>"
-            f"{escape(c['title'])} ↗</a></h4><div class='meta'>{escape(c['court'])} · "
-            f"{escape(c['date'])} · {escape(c['citation'])}</div>"
-            f"<span class='badge {'b-bad' if bad else 'b-ok'}'>{escape(c['treatment'])}</span></div>",
-            unsafe_allow_html=True,
-        )
-    st.markdown("#### Chat with one judgment")
-    titles = {c["title"]: c["case_id"] for c in cases}
-    chosen = st.selectbox("Judgment", list(titles))
-    case = svc.get_case(titles[chosen])
+            ss[f"sent-{hash(ss.q)}"] = True
+            st.toast("Feedback recorded")
     st.markdown(
-        "".join(chip(law["label"], law["url"]) for law in case["laws"])
-        + chip("Open full judgment ↗", case["url"]),
+        f"<div class='foot'>{escape(' '.join(r.coverage.limits))} Indexed: {escape(r.coverage.corpus)}. "
+        f"{escape(r.disclaimer)}</div>",
         unsafe_allow_html=True,
     )
-    with st.form("chat", border=False):
-        k1, k2 = st.columns([6, 1], vertical_alignment="bottom")
-        cq = k1.text_input(
-            "Ask this judgment", label_visibility="collapsed", placeholder=f"Ask about {chosen}…"
-        )
-        asked = k2.form_submit_button("Ask  ⚖️", use_container_width=True)
-    if asked and cq.strip():
-        with st.spinner("Reading the judgment…"):
-            render(svc.chat_case(titles[chosen], cq.strip(), {"tone": tone}), f"chat-{chosen}-{cq}")
-    with st.expander("Read the full judgment here"):
-        for para in svc.store.get_paragraphs(titles[chosen]):
-            st.markdown(
-                f"**{para.n}.** <span class='meta'>{para.section}</span><br>{escape(para.text)}",
-                unsafe_allow_html=True,
-            )
 
-with tab_law:
-    quick = st.pills(
-        "Popular",
-        ["IPC 302", "BNS 103", "CrPC 439", "CrPC 438", "IEA 65B", "IPC 304B", "CrPC 125"],
-        key="lawpick",
+
+with research:
+    st.markdown(
+        "<div class='hero'><h1>Constitutional research, grounded in precedent.</h1>"
+        "<p>Describe your client's situation. Helper in Law finds the governing provisions of the "
+        "Constitution and the Supreme Court judgments that apply them. Every statement is checked "
+        "against the official text before it is shown.</p></div>",
+        unsafe_allow_html=True,
     )
-    with st.form("law", border=False):
-        a1, a2, a3 = st.columns([2, 2, 1], vertical_alignment="bottom")
-        act = a1.selectbox(
-            "Act",
-            ["IPC", "BNS", "CrPC", "BNSS", "IEA", "BSA", "CONST"],
-            format_func=lambda x: ACT_LABEL.get(x, x),
-        )
-        sec = a2.text_input("Section", placeholder="e.g. 302")
-        go = a3.form_submit_button("Look up", use_container_width=True)
-    if go and sec.strip():
-        act, sec = act, sec.strip()
-    elif quick:
-        act, sec = quick.split(" ")
-    if (go and sec) or quick:
-        info = svc.lookup_statute(act, sec)
-        law = info["law"]
-        st.markdown(
-            f"<div class='card law'><h3 style='margin:0'>{escape(law['label'])}</h3>"
-            f"<div class='meta'>{escape(' ↔ '.join(info['equivalents']))}</div>"
-            + chip("Official text on India Code ↗", law["official_url"])
-            + chip("Statute page ↗", law["url"])
-            + "</div>",
-            unsafe_allow_html=True,
-        )
-        if not info["cases"]:
-            st.info("No indexed judgment applies this provision.")
-        for c in info["cases"]:
+    with st.form("ask", border=True):
+        typed = st.text_area("Situation", value=ss.q, height=120, label_visibility="collapsed",
+                             placeholder="e.g. My client was detained by the police for two days without being "
+                                         "told the reason for his arrest…")
+        f1, f2 = st.columns([5, 1], vertical_alignment="center")
+        f1.caption("Press Ctrl + Enter or click Analyse. Facts stay on this machine.")
+        if f2.form_submit_button("Analyse", use_container_width=True):
+            ss.q = typed.strip()
+    pick = st.pills("Example situations", list(SCENARIOS), key="pick")
+    if pick and pick != ss.get("last_pick"):
+        ss.last_pick = pick
+        ss.q = SCENARIOS[pick]
+        st.rerun()
+    if ss.q:
+        style = {"depth": detail or "standard", "structure": layout or "bullets", "tone": tone or "technical"}
+        filters = Filters(year_from=years[0] if years[0] > 1950 else None,
+                          year_to=years[1] if years[1] < 2025 else None)
+        with st.spinner("Reading the Constitution and the judgments…"):
+            resp = svc.ask(ss.q, filters, style)
+        render(resp)
+
+with lookup:
+    st.markdown("<div class='hero'><h1 style='font-size:2rem'>Look up an Article</h1><p>Official text from the "
+                "Government of India's publication of the Constitution, with the exact page and the judgments "
+                "that apply it.</p></div>", unsafe_allow_html=True)
+    with st.form("lookup", border=True):
+        l1, l2 = st.columns([5, 1], vertical_alignment="bottom")
+        number = l1.text_input("Article", placeholder="Article number, e.g. 21, 21A, 300A")
+        go = l2.form_submit_button("Look up", use_container_width=True)
+    quick = st.pills("Frequently cited", ["14", "15", "19", "21", "21A", "22", "32", "226", "300A"], key="artpick")
+    art = number.strip() if go and number.strip() else quick
+    if art:
+        try:
+            with st.spinner("Fetching the official text…"):
+                a = svc.get_article(art)
+        except KeyError:
+            st.error(f"Article {art} was not found in the official text. It may have been omitted or repealed.")
+        except OSError as e:
+            st.error(f"Could not reach the official source: {e}")
+        else:
             st.markdown(
-                f"<div class='card src'><h4><a href='{escape(c['url'])}' target='_blank'>{escape(c['title'])}"
-                f" ↗</a></h4><div class='meta'>{escape(c['citation'])} · {escape(c['date'])} · "
-                f"{escape(c['treatment'])}</div></div>",
+                f"<div class='card prov'><h4>Article {escape(a['article'])}. {escape(a['title'])}</h4>"
+                f"<blockquote>{escape(a['text'])}</blockquote><div class='links'>"
+                f"{link('Official text, exact page ↗', a['official_url'])}</div>"
+                f"<div class='meta' style='margin-top:8px'>Source: {escape(a['source'])}</div></div>",
                 unsafe_allow_html=True,
             )
-        st.caption(info["note"])
+            st.markdown(f"<div class='label'>Indexed judgments applying Article {escape(a['article'])}</div>",
+                        unsafe_allow_html=True)
+            if not a["judgments"]:
+                st.caption("None of the indexed judgments applies this Article yet.")
+            for c in a["judgments"]:
+                pdf = svc.store.get_case(c["case_id"])
+                st.markdown(
+                    f"<div class='card case'><h4>{escape(c['title'])}</h4><div class='meta'>{escape(c['citation'])}"
+                    f" · {escape(c['date'])}</div><div class='links' style='margin-top:6px'>"
+                    f"{link('Read judgment ↗', c['url'])}{link('Original PDF ↗', pdf.url) if pdf and pdf.url else ''}"
+                    f"</div></div>",
+                    unsafe_allow_html=True,
+                )
