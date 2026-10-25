@@ -13,19 +13,29 @@ LEAD = {
     "plain": "In simple terms: ",
     "new": "What this means: ",
 }
-IRAC = [("Rule", {"statute", "ratio"}), ("Application", {"fact", "procedural", "obiter"}),
-        ("Conclusion", {"holding"})]
-MEMO = [("Holdings", {"holding"}), ("Reasoning", {"ratio", "statute", "obiter"}),
-        ("Facts and procedure", {"fact", "procedural"})]
+IRAC = [
+    ("Rule", {"statute", "ratio"}),
+    ("Application", {"fact", "procedural", "obiter"}),
+    ("Conclusion", {"holding"}),
+]
+MEMO = [
+    ("Holdings", {"holding"}),
+    ("Reasoning", {"ratio", "statute", "obiter"}),
+    ("Facts and procedure", {"fact", "procedural"}),
+]
 
 
 def select(claims: list[VerifiedClaim], profile: Profile) -> list[VerifiedClaim]:
-    out = [c for c in claims
-           if not (profile.contrary_authority == "never" and c.claim.stance == "contrary")
-           and not (profile.obiter == "hide" and c.claim.type == "obiter")]
+    out = [
+        c
+        for c in claims
+        if not (profile.contrary_authority == "never" and c.claim.stance == "contrary")
+        and not (profile.obiter == "hide" and c.claim.type == "obiter")
+    ]
     out = out[: DEPTH_LIMIT[profile.depth]]
     if profile.max_words:
-        kept, words = [], 0
+        kept: list[VerifiedClaim] = []
+        words = 0
         for c in out:
             words += len(c.claim.text.split())
             if kept and words > profile.max_words:
@@ -45,8 +55,12 @@ def cite_label(c: Citation, style: str) -> str:
     return f"{c.case_title}, {c.citation}, para {c.para}"
 
 
-def present(claims: list[VerifiedClaim], by_claim: dict[str, list[str]],
-            citations: list[Citation], profile: Profile) -> list[AnswerBlock]:
+def present(
+    claims: list[VerifiedClaim],
+    by_claim: dict[str, list[str]],
+    citations: list[Citation],
+    profile: Profile,
+) -> list[AnswerBlock]:
     chosen = select(claims, profile)
     cites = {c.id: c for c in citations}
     lead = LEAD[profile.tone]
@@ -88,5 +102,5 @@ def to_markdown(blocks: list[AnswerBlock], citations: list[Citation], profile: P
     if profile.citation_style == "footnotes" or profile.quotes == "always":
         lines.append("")
         for c in citations:
-            lines.append(f"[{c.id}] {c.case_title}, {c.citation}, para {c.para}: \"{c.quote}\"")
+            lines.append(f'[{c.id}] {c.case_title}, {c.citation}, para {c.para}: "{c.quote}"')
     return "\n".join(lines)

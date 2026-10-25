@@ -8,7 +8,7 @@ def treatment(store: Store, case_id: str) -> Treatment:
     edges = {e["treatment"] for e in store.citing_cases(case_id)}
     for t in ("overruled", "distinguished", "followed"):
         if t in edges:
-            return t  # type: ignore[return-value]
+            return t
     return "unknown"
 
 

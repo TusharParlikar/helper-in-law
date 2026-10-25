@@ -7,17 +7,20 @@ from helperinlaw.ground.verify.entities import entities
 from helperinlaw.ground.verify.injection import looks_injected
 
 
-def guard(blocks: list[AnswerBlock], claims: list[VerifiedClaim],
-          citations: list[Citation]) -> tuple[list[AnswerBlock], int]:
+def guard(
+    blocks: list[AnswerBlock], claims: list[VerifiedClaim], citations: list[Citation]
+) -> tuple[list[AnswerBlock], int]:
     """Returns (blocks that pass, number blocked)."""
     cite_ids = {c.id for c in citations}
-    allowed = {x.lower() for c in citations for x in (c.case_title, c.citation, c.neutral_citation) if x}
-    known = set()
-    for c in claims:
-        known |= entities(c.claim.text)
-    for c in citations:
-        known |= entities(f"{c.para} {c.date} {c.citation} {c.neutral_citation}")
-    kept = []
+    allowed = {
+        x.lower() for c in citations for x in (c.case_title, c.citation, c.neutral_citation) if x
+    }
+    known: set[str] = set()
+    for vc in claims:
+        known |= entities(vc.claim.text)
+    for ct in citations:
+        known |= entities(f"{ct.para} {ct.date} {ct.citation} {ct.neutral_citation}")
+    kept: list[AnswerBlock] = []
     for b in blocks:
         if not b.citation_ids or set(b.citation_ids) - cite_ids:
             continue

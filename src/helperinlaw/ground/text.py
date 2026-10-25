@@ -8,15 +8,31 @@ NEG = re.compile(r"\b(not|no|never|cannot|nor|neither|without)\b|n't\b", re.I)
 WORD = re.compile(r"[a-z0-9]+")
 MODALS = {"may", "must", "shall", "should", "can", "could", "would", "will"}
 NUMBER_WORDS = {
-    "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7",
-    "eight": "8", "nine": "9", "ten": "10", "eleven": "11", "twelve": "12", "fourteen": "14",
-    "fifteen": "15", "twenty": "20", "thirty": "30",
+    "one": "1",
+    "two": "2",
+    "three": "3",
+    "four": "4",
+    "five": "5",
+    "six": "6",
+    "seven": "7",
+    "eight": "8",
+    "nine": "9",
+    "ten": "10",
+    "eleven": "11",
+    "twelve": "12",
+    "fourteen": "14",
+    "fifteen": "15",
+    "twenty": "20",
+    "thirty": "30",
 }
+
+
+QUOTES = str.maketrans({"“": '"', "”": '"', "‘": "'", "’": "'", "–": "-", "—": "-"})
 
 
 def normalise(text: str) -> str:
     text = PARA_MARK.sub("", text)
-    text = text.translate(str.maketrans({"“": '"', "”": '"', "‘": "'", "’": "'", "–": "-", "—": "-"}))
+    text = text.translate(QUOTES)
     return " ".join(text.lower().split())
 
 
@@ -35,7 +51,10 @@ def paragraphs_of(chunk_text: str) -> list[tuple[int, str]]:
     """Split a chunk back into its [n]-marked paragraphs."""
     marks = list(PARA_MARK.finditer(chunk_text))
     return [
-        (int(m.group(1)), chunk_text[m.end(): marks[i + 1].start() if i + 1 < len(marks) else None].strip())
+        (
+            int(m.group(1)),
+            chunk_text[m.end() : marks[i + 1].start() if i + 1 < len(marks) else None].strip(),
+        )
         for i, m in enumerate(marks)
     ]
 
@@ -59,7 +78,7 @@ def negations(text: str) -> set[tuple[str, str]]:
     pairs = set()
     for i, w in enumerate(words):
         if NEG.fullmatch(w) or w.endswith("n't"):
-            nxt = next((x for x in words[i + 1:] if x not in STOP - MODALS), "")
+            nxt = next((x for x in words[i + 1 :] if x not in STOP - MODALS), "")
             pairs.add(("not", stem(nxt)))
     return pairs
 

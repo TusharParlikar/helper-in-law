@@ -26,7 +26,8 @@ def suspicious(sentence: str, allowed: set[str]) -> list[str]:
 
 
 def sanitise(text: str, allowed: set[str]) -> tuple[str, list[str]]:
-    kept, stripped = [], []
+    kept: list[str] = []
+    stripped: list[str] = []
     for s in sentences(text):
         (stripped if suspicious(s, allowed) else kept).append(s)
     return " ".join(kept), stripped
