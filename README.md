@@ -1,6 +1,6 @@
 # Helper in Law
 
-> Citation-first research over Indian court judgments. Every claim shown is verified against the source text, and answers adapt to how you like to read them.
+> Describe your client's situation. Get the governing provisions of the Constitution of India and the Supreme Court judgments that apply them, with every statement verified against the official text.
 
 ![status](https://img.shields.io/badge/status-Phase%201%20in%20development-orange)
 ![python](https://img.shields.io/badge/python-3.12-blue)
@@ -35,7 +35,19 @@
 
 ## What is this?
 
-**Helper in Law** is a retrieval-augmented generation (RAG) system for Indian court judgments. You ask a legal research question; it finds the relevant judgments, and answers **only** from what it found, with a pinpoint citation (case, court, date, paragraph) and the exact quote behind every statement.
+**Helper in Law** is a retrieval-augmented generation (RAG) system for Indian constitutional research. A lawyer describes a scenario in plain words ("my client was detained without being told why"). It finds:
+
+1. **The constitutional provisions** that govern it, quoted from the **official text** published by the Legislative Department, Government of India, with a link to the exact page of the official PDF.
+2. **Supreme Court judgments** that apply those provisions, quoted at the paragraph, with a link to the judgment and the original e-SCR PDF.
+
+It answers **only** from those sources. Every statement carries the exact quote it rests on, machine-verified before display.
+
+**Corpus (built by the ingest commands below):**
+
+| Source | What | Licence |
+|---|---|---|
+| The Constitution of India [As on 1st May, 2024], Legislative Department | All articles, each linked to its page in the official PDF | Official Government publication |
+| Indian Supreme Court Judgments (AWS Open Data, Dattam Labs) | Supreme Court judgments applying key fundamental-rights articles (default: 150 from 2014-2024) | CC-BY-4.0 |
 
 It is exposed three ways, all backed by one core service:
 
@@ -169,7 +181,7 @@ ollama pull nomic-embed-text
 cp .env.example .env
 
 # 5. Ingest the sample corpus, then build the index
-uv run python -m helperinlaw.ingest data/sample
+uv run python -m helperinlaw.ingest --constitution --sci 2014-2024 --limit 150
 uv run python -m helperinlaw.index build
 
 # 6. Run
@@ -224,6 +236,7 @@ Use the tools from Claude Desktop, Claude Code, or any MCP client. All tools are
 | `get_paragraph` | Exact paragraph text (max 10) |
 | `find_citing_cases` | Cases citing a judgment, with treatment |
 | `lookup_statute` | Statute plus IPC↔BNS mapping and top cases |
+| `get_constitution_article` | Official text of an Article, its official PDF page, and judgments applying it |
 | `get_profile` / `set_style` | Read or override answer style |
 
 **Claude Code (stdio):**
