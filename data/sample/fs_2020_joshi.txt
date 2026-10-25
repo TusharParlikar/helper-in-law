@@ -1,0 +1,26 @@
+FICTIONAL SAMPLE JUDGMENT - FOR TESTING ONLY - NOT A REAL CASE
+IN THE SUPREME COURT OF INDIA
+CIVIL APPEAL NO. 505 OF 2020
+Neha Joshi v. Union of India
+Date of Judgment: 14-07-2020
+Bench: I. Nair, J.; J. Khan, J.; K. Patel, J.
+Citation: (2020) 6 FSR 505
+Neutral Citation: 2020 FSC 505
+
+JUDGMENT
+
+1. This reference arises from conflicting views on the admissibility of electronic records without a certificate under Section 65B(4) of the Indian Evidence Act.
+
+2. Learned counsel for the appellant submitted that the decision in Rohit Verma v. State of NCT of Delhi, (2016) 2 FSR 404 requires reconsideration.
+
+3. The issue is whether a certificate under Section 65B(4) is a condition precedent to the admissibility of secondary evidence of an electronic record.
+
+4. Section 65B is a complete code on the admissibility of electronic records. A certificate under Section 65B(4) is mandatory where secondary evidence of an electronic record is produced.
+
+5. A party who is not in possession of the device may apply to the court to direct the person in charge of the device to produce the certificate.
+
+6. The view taken in Rohit Verma v. State of NCT of Delhi, (2016) 2 FSR 404 that the certificate may be dispensed with is not correct in law and is accordingly overruled.
+
+7. The certificate is not required where the original device itself is produced before the court as primary evidence.
+
+8. The reference is answered accordingly.
