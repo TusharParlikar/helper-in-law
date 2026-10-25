@@ -16,8 +16,33 @@ from pathlib import Path
 
 import numpy as np
 from motion import (
-    BLACK, FPS, GREY_D, H, INK, SR, W, WHITE, bloom, day_counter, encoder, ease, env, font, framed, icon,
-    finish, motes, music_bed, smooth, mux, put, scales, screen_frames, wall, words, write_wav,
+    BLACK,
+    FPS,
+    GREY_D,
+    INK,
+    SR,
+    WHITE,
+    H,
+    W,
+    bloom,
+    day_counter,
+    ease,
+    encoder,
+    env,
+    finish,
+    font,
+    framed,
+    icon,
+    motes,
+    music_bed,
+    mux,
+    put,
+    scales,
+    screen_frames,
+    smooth,
+    wall,
+    words,
+    write_wav,
 )
 from PIL import Image
 
@@ -42,7 +67,16 @@ def s_story(t: float, d: float) -> Image.Image:
 def s_pages(t: float, d: float) -> Image.Image:
     im = wall(t + 4, speed=30, strength=0.30)
     words(im, "Thousands of pages of judgments.", font("serif", 88), H / 2 - 80, WHITE, t, 0.5, d)
-    words(im, "Somewhere in them, the law that decides it.", font("serif", 60), H / 2 + 70, GREY_D, t, 2.0, d)
+    words(
+        im,
+        "Somewhere in them, the law that decides it.",
+        font("serif", 60),
+        H / 2 + 70,
+        GREY_D,
+        t,
+        2.0,
+        d,
+    )
     return im
 
 
@@ -64,13 +98,24 @@ def s_title(t: float, d: float) -> Image.Image:
     a, r = env(t, 1.3, d, 0.9, 0.6)
     put(im, "Helper in Law", font("serifb", 140), H / 2 + 70, WHITE, a, r)
     a, r = env(t, 2.2, d, 0.9, 0.6)
-    put(im, "Constitutional research, grounded in precedent.", font("reg", 44), H / 2 + 190, WHITE, a, r, gold=True)
+    put(
+        im,
+        "Constitutional research, grounded in precedent.",
+        font("reg", 44),
+        H / 2 + 190,
+        WHITE,
+        a,
+        r,
+        gold=True,
+    )
     return im
 
 
-PILLARS = [("check", "Verified.", "Every statement checked against its source."),
-           ("quote", "Cited.", "Every quote, to the exact paragraph."),
-           ("clock", "In minutes.", "Not days.")]
+PILLARS = [
+    ("check", "Verified.", "Every statement checked against its source."),
+    ("quote", "Cited.", "Every quote, to the exact paragraph."),
+    ("clock", "In minutes.", "Not days."),
+]
 
 
 def s_pillars(t: float, d: float) -> Image.Image:
@@ -96,36 +141,65 @@ def s_end(t: float, d: float) -> Image.Image:
     put(im, "Every claim. Verified.", font("reg", 52), H / 2 + 110, WHITE, a, r, gold=True)
     a, _ = env(t, 2.2, d, 1.0, 1.2)
     put(im, "A research aid, not legal advice.", font("reg", 26), H - 120, (120, 120, 125), a)
-    put(im, "Judgment text: Supreme Court of India, via the Indian Supreme Court Judgments dataset (CC BY 4.0).",
-        font("reg", 20), H - 80, (85, 85, 90), a)
+    put(
+        im,
+        "Judgment text: Supreme Court of India, via the Indian Supreme Court Judgments dataset (CC BY 4.0).",
+        font("reg", 20),
+        H - 80,
+        (85, 85, 90),
+        a,
+    )
     return im
 
 
 HOPELESS = [
     Scene("Every case begins with a story.", s_story),
-    Scene("And somewhere, in thousands of pages of judgments, is the law that decides it.", s_pages),
+    Scene(
+        "And somewhere, in thousands of pages of judgments, is the law that decides it.", s_pages
+    ),
     Scene("Finding it can take days. Missing it can cost everything.", s_days),
 ]
 HOPEFUL = [
     Scene("Introducing Helper in Law.", s_title, min_dur=4.6),
-    Scene("Just describe your client's situation, in your own words.",
-          ui=("home", "typed", "typed", 7.0), caption="Describe the situation."),
-    Scene("Helper in Law finds the Article of the Constitution that governs it.",
-          ui=("typed", "provisions", "provisions", 2.4), caption="The Article that governs it."),
-    Scene("Every statement is checked against the source, before you ever see it.",
-          ui=("provisions", "analysis", "analysis", 2.6), caption="Every statement, checked."),
-    Scene("With the Supreme Court judgments that apply it, quoted at the exact paragraph.",
-          ui=("analysis", "judgments", "judgments", 2.6), caption="The judgments that apply it."),
-    Scene("Look up any Article, in its official words.",
-          ui=("lookup", "article", "article", 2.2), caption="Any Article, in its official words."),
-    Scene("And when the law is silent, it tells you. It never guesses.",
-          ui=("article", "notfound", "notfound", 2.6), caption="When the law is silent, it says so."),
+    Scene(
+        "Just describe your client's situation, in your own words.",
+        ui=("home", "typed", "typed", 7.0),
+        caption="Describe the situation.",
+    ),
+    Scene(
+        "Helper in Law finds the Article of the Constitution that governs it.",
+        ui=("typed", "provisions", "provisions", 2.4),
+        caption="The Article that governs it.",
+    ),
+    Scene(
+        "Every statement is checked against the source, before you ever see it.",
+        ui=("provisions", "analysis", "analysis", 2.6),
+        caption="Every statement, checked.",
+    ),
+    Scene(
+        "With the Supreme Court judgments that apply it, quoted at the exact paragraph.",
+        ui=("analysis", "judgments", "judgments", 2.6),
+        caption="The judgments that apply it.",
+    ),
+    Scene(
+        "Look up any Article, in its official words.",
+        ui=("lookup", "article", "article", 2.2),
+        caption="Any Article, in its official words.",
+    ),
+    Scene(
+        "And when the law is silent, it tells you. It never guesses.",
+        ui=("article", "notfound", "notfound", 2.6),
+        caption="When the law is silent, it says so.",
+    ),
     Scene("Verified. Cited. In minutes, not days.", s_pillars, min_dur=6.9),
     Scene("Helper in Law. Every claim, verified.", s_end, min_dur=6.0),
 ]
 
 
-NARRATOR, PACE = "am_fenrir", 0.95  # chosen by ear from Kokoro's voices; a touch slower than default
+NARRATOR, PACE = (
+    "am_fenrir",
+    0.95,
+)  # chosen by ear from Kokoro's voices; a touch slower than default
 
 
 def voice(kokoro_dir: Path, scenes: list[Scene], work: Path) -> list[np.ndarray]:
@@ -141,7 +215,9 @@ def voice(kokoro_dir: Path, scenes: list[Scene], work: Path) -> list[np.ndarray]
             wf.setsampwidth(2)
             wf.setframerate(sr)
             wf.writeframes((np.clip(pcm, -1, 1) * 32767).astype("<i2").tobytes())
-        clips.append(np.interp(np.arange(int(len(pcm) * SR / sr)) / SR, np.arange(len(pcm)) / sr, pcm))
+        clips.append(
+            np.interp(np.arange(int(len(pcm) * SR / sr)) / SR, np.arange(len(pcm)) / sr, pcm)
+        )
     return clips
 
 
@@ -155,9 +231,11 @@ def main(rec: Path, model: Path, out: Path, audio_only: bool = False) -> None:
     # the problem takes exactly TURN seconds, so picture and music turn together
     raw = [max(sc.min_dur, n + 1.0) for sc, n in zip(HOPELESS, lens[: len(HOPELESS)], strict=True)]
     if sum(lens[: len(HOPELESS)]) + 0.45 * len(HOPELESS) > TURN:
-        raise SystemExit(f"opening narration is {sum(lens[: len(HOPELESS)]):.1f}s: too long for the {TURN}s turn")
+        raise SystemExit(
+            f"opening narration is {sum(lens[: len(HOPELESS)]):.1f}s: too long for the {TURN}s turn"
+        )
     durs = [d * TURN / sum(raw) for d in raw]
-    for sc, n in zip(HOPEFUL, lens[len(HOPELESS):], strict=True):
+    for sc, n in zip(HOPEFUL, lens[len(HOPELESS) :], strict=True):
         d = max(sc.min_dur, n + 1.2)
         if sc.ui:
             d = max(d, (marks[sc.ui[1]]["t"] - marks[sc.ui[0]]["t"]) / 1.9)

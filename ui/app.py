@@ -11,8 +11,9 @@ from helperinlaw.core.config import Settings
 from helperinlaw.core.types import Citation, Filters, Response
 from helperinlaw.service import Service
 
-st.set_page_config(page_title="Helper in Law", page_icon="⚖", layout="wide",
-                   initial_sidebar_state="collapsed")
+st.set_page_config(
+    page_title="Helper in Law", page_icon="⚖", layout="wide", initial_sidebar_state="collapsed"
+)
 
 st.markdown(
     f"""
@@ -104,23 +105,46 @@ top_l, top_r = st.columns([3, 2], vertical_alignment="center")
 with top_r:
     s1, s2 = st.columns([3, 1], vertical_alignment="center")
     with s2.popover("Settings", use_container_width=True):
-        use_llm = st.toggle("AI drafting (Ollama)", value=False,
-                            help="Off: verbatim passages, instant. On: the local model drafts the analysis; "
-                                 "every statement is still checked against the source before it is shown.")
-        detail = st.segmented_control("Detail", ["quick", "standard", "deep"], default="standard",
-                                      format_func={"quick": "Brief", "standard": "Standard", "deep": "Detailed"}.get)
-        layout = st.segmented_control("Format", ["bullets", "irac", "memo"], default="bullets",
-                                      format_func={"bullets": "Points", "irac": "IRAC", "memo": "Memo"}.get)
-        tone = st.segmented_control("Language", ["technical", "plain"], default="technical",
-                                    format_func={"technical": "Legal", "plain": "Plain"}.get)
+        use_llm = st.toggle(
+            "AI drafting (Ollama)",
+            value=False,
+            help="Off: verbatim passages, instant. On: the local model drafts the analysis; "
+            "every statement is still checked against the source before it is shown.",
+        )
+        detail = st.segmented_control(
+            "Detail",
+            ["quick", "standard", "deep"],
+            default="standard",
+            format_func={"quick": "Brief", "standard": "Standard", "deep": "Detailed"}.get,
+        )
+        layout = st.segmented_control(
+            "Format",
+            ["bullets", "irac", "memo"],
+            default="bullets",
+            format_func={"bullets": "Points", "irac": "IRAC", "memo": "Memo"}.get,
+        )
+        tone = st.segmented_control(
+            "Language",
+            ["technical", "plain"],
+            default="technical",
+            format_func={"technical": "Legal", "plain": "Plain"}.get,
+        )
         years = st.slider("Judgments from", 1950, 2025, (1950, 2025))
 svc = service(use_llm)
 cov = svc.coverage()
 with top_l:
-    st.markdown(f"<div class='brand'><img src='{mark()}' height='34'>Helper in Law</div>", unsafe_allow_html=True)
-s1.markdown(f"<div class='status' style='text-align:right'><b>Indexed</b> · {escape(cov.corpus)}</div>",
-            unsafe_allow_html=True)
-st.markdown("<div style='border-bottom:1px solid var(--line);margin:4px 0 8px'></div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='brand'><img src='{mark()}' height='34'>Helper in Law</div>",
+        unsafe_allow_html=True,
+    )
+s1.markdown(
+    f"<div class='status' style='text-align:right'><b>Indexed</b> · {escape(cov.corpus)}</div>",
+    unsafe_allow_html=True,
+)
+st.markdown(
+    "<div style='border-bottom:1px solid var(--line);margin:4px 0 8px'></div>",
+    unsafe_allow_html=True,
+)
 
 research, lookup = st.tabs(["Research", "Constitution lookup"])
 
@@ -175,10 +199,17 @@ def by_case(cs: list[Citation]) -> list[list[Citation]]:
 
 def render(r: Response) -> None:
     v = r.verification
-    conf = {"high": "High confidence", "medium": "Moderate confidence", "low": "Review carefully",
-            "not_found": "No support found"}[r.confidence]
-    mode = {"synthesised": "AI-drafted, then verified", "extractive": "Verbatim from sources",
-            "abstained": "No answer given"}[v.mode]
+    conf = {
+        "high": "High confidence",
+        "medium": "Moderate confidence",
+        "low": "Review carefully",
+        "not_found": "No support found",
+    }[r.confidence]
+    mode = {
+        "synthesised": "AI-drafted, then verified",
+        "extractive": "Verbatim from sources",
+        "abstained": "No answer given",
+    }[v.mode]
     st.markdown(
         f"<div class='summary'><span class='pill p-{r.confidence}'>{conf}</span>"
         f"<span class='sumtext'>{v.verified} of {v.claims_proposed} statements verified against the source text"
@@ -241,9 +272,14 @@ with research:
         unsafe_allow_html=True,
     )
     with st.form("ask", border=True):
-        typed = st.text_area("Situation", value=ss.q, height=120, label_visibility="collapsed",
-                             placeholder="e.g. My client was detained by the police for two days without being "
-                                         "told the reason for his arrest…")
+        typed = st.text_area(
+            "Situation",
+            value=ss.q,
+            height=120,
+            label_visibility="collapsed",
+            placeholder="e.g. My client was detained by the police for two days without being "
+            "told the reason for his arrest…",
+        )
         f1, f2 = st.columns([5, 1], vertical_alignment="center")
         f1.caption("Press Ctrl + Enter or click Analyse. Facts stay on this machine.")
         if f2.form_submit_button("Analyse", use_container_width=True):
@@ -254,29 +290,44 @@ with research:
         ss.q = SCENARIOS[pick]
         st.rerun()
     if ss.q:
-        style = {"depth": detail or "standard", "structure": layout or "bullets", "tone": tone or "technical"}
-        filters = Filters(year_from=years[0] if years[0] > 1950 else None,
-                          year_to=years[1] if years[1] < 2025 else None)
+        style = {
+            "depth": detail or "standard",
+            "structure": layout or "bullets",
+            "tone": tone or "technical",
+        }
+        filters = Filters(
+            year_from=years[0] if years[0] > 1950 else None,
+            year_to=years[1] if years[1] < 2025 else None,
+        )
         with st.spinner("Reading the Constitution and the judgments…"):
             resp = svc.ask(ss.q, filters, style)
         render(resp)
 
 with lookup:
-    st.markdown("<div class='hero'><h1 style='font-size:2rem'>Look up an Article</h1><p>Official text from the "
-                "Government of India's publication of the Constitution, with the exact page and the judgments "
-                "that apply it.</p></div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='hero'><h1 style='font-size:2rem'>Look up an Article</h1><p>Official text from the "
+        "Government of India's publication of the Constitution, with the exact page and the judgments "
+        "that apply it.</p></div>",
+        unsafe_allow_html=True,
+    )
     with st.form("lookup", border=True):
         l1, l2 = st.columns([5, 1], vertical_alignment="bottom")
         number = l1.text_input("Article", placeholder="Article number, e.g. 21, 21A, 300A")
         go = l2.form_submit_button("Look up", use_container_width=True)
-    quick = st.pills("Frequently cited", ["14", "15", "19", "21", "21A", "22", "32", "226", "300A"], key="artpick")
+    quick = st.pills(
+        "Frequently cited",
+        ["14", "15", "19", "21", "21A", "22", "32", "226", "300A"],
+        key="artpick",
+    )
     art = number.strip() if go and number.strip() else quick
     if art:
         try:
             with st.spinner("Fetching the official text…"):
                 a = svc.get_article(art)
         except KeyError:
-            st.error(f"Article {art} was not found in the official text. It may have been omitted or repealed.")
+            st.error(
+                f"Article {art} was not found in the official text. It may have been omitted or repealed."
+            )
         except OSError as e:
             st.error(f"Could not reach the official source: {e}")
         else:
@@ -287,8 +338,10 @@ with lookup:
                 f"<div class='meta' style='margin-top:8px'>Source: {escape(a['source'])}</div></div>",
                 unsafe_allow_html=True,
             )
-            st.markdown(f"<div class='label'>Indexed judgments applying Article {escape(a['article'])}</div>",
-                        unsafe_allow_html=True)
+            st.markdown(
+                f"<div class='label'>Indexed judgments applying Article {escape(a['article'])}</div>",
+                unsafe_allow_html=True,
+            )
             if not a["judgments"]:
                 st.caption("None of the indexed judgments applies this Article yet.")
             for c in a["judgments"]:

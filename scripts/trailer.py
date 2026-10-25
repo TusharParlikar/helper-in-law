@@ -11,8 +11,31 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "film"))
 from motion import (  # noqa: E402
-    BLACK, GREY_D, H, INK, W, WHITE, bloom, day_counter, encoder, ease, env, font, framed, icon,
-    finish, motes, music_bed, mux, put, scales, screen_frames, wall, words, write_wav, FPS,
+    BLACK,
+    FPS,
+    GREY_D,
+    INK,
+    WHITE,
+    H,
+    W,
+    bloom,
+    day_counter,
+    ease,
+    encoder,
+    env,
+    finish,
+    font,
+    framed,
+    icon,
+    motes,
+    music_bed,
+    mux,
+    put,
+    scales,
+    screen_frames,
+    wall,
+    words,
+    write_wav,
 )
 from PIL import Image  # noqa: E402
 
@@ -53,7 +76,16 @@ def s_title(t: float, dur: float) -> Image.Image:
     a, r = env(t, 1.4, dur, 0.9, 0.6)
     put(im, "Helper in Law", font("serifb", 140), H / 2 + 70, WHITE, a, r)
     a, r = env(t, 2.3, dur, 0.9, 0.6)
-    put(im, "Describe the situation. Get the law.", font("reg", 46), H / 2 + 190, WHITE, a, r, gold=True)
+    put(
+        im,
+        "Describe the situation. Get the law.",
+        font("reg", 46),
+        H / 2 + 190,
+        WHITE,
+        a,
+        r,
+        gold=True,
+    )
     return im
 
 
@@ -83,8 +115,14 @@ def s_end(t: float, dur: float) -> Image.Image:
     put(im, "Every claim. Verified.", font("reg", 52), H / 2 + 110, WHITE, a, r, gold=True)
     a, _ = env(t, 2.2, dur, 1.0, 1.2)
     put(im, "A research aid, not legal advice.", font("reg", 26), H - 120, (120, 120, 125), a)
-    put(im, "Judgment text: Supreme Court of India, via the Indian Supreme Court Judgments dataset (CC BY 4.0).",
-        font("reg", 20), H - 80, (85, 85, 90), a)
+    put(
+        im,
+        "Judgment text: Supreme Court of India, via the Indian Supreme Court Judgments dataset (CC BY 4.0).",
+        font("reg", 20),
+        H - 80,
+        (85, 85, 90),
+        a,
+    )
     return im
 
 
@@ -131,9 +169,11 @@ def main(rec: Path, audio_only: bool = False) -> None:
             gk = ease((src_t - (t1 - lead) - 1.0) / 0.6)
             enc.stdin.write(framed(fr, k / FPS, dur, caption, box, zk, gk).tobytes())
         clock += dur
-    for kind, head, sub in [("check", "Verified.", "Every statement checked against its source."),
-                            ("quote", "Cited.", "Every quote, to the exact paragraph."),
-                            ("clock", "In minutes.", "Not days.")]:
+    for kind, head, sub in [
+        ("check", "Verified.", "Every statement checked against its source."),
+        ("quote", "Cited.", "Every quote, to the exact paragraph."),
+        ("clock", "In minutes.", "Not days."),
+    ]:
         card(lambda t, d, k=kind, h=head, s=sub: s_pillar(t, d, k, h, s), PILLAR_DUR)
     outro = clock
     card(s_end, END_DUR)

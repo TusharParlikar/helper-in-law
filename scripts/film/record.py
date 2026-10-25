@@ -25,8 +25,11 @@ def main(out: Path) -> None:
     marks: dict[str, dict[str, object]] = {}
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        ctx = browser.new_context(viewport={"width": W, "height": H}, record_video_dir=str(out),
-                                  record_video_size={"width": W, "height": H})
+        ctx = browser.new_context(
+            viewport={"width": W, "height": H},
+            record_video_dir=str(out),
+            record_video_size={"width": W, "height": H},
+        )
         t0 = time.monotonic()
         page = ctx.new_page()
 
@@ -81,7 +84,9 @@ def main(out: Path) -> None:
         field.click()
         field.press_sequentially("21", delay=180)
         page.get_by_role("button", name="Look up").click()
-        page.get_by_text("Article 21. Protection of life and personal liberty").wait_for(timeout=60000)
+        page.get_by_text("Article 21. Protection of life and personal liberty").wait_for(
+            timeout=60000
+        )
         page.wait_for_timeout(4500)
         mark("article", ".card.prov")
 
