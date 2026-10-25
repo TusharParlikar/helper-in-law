@@ -25,7 +25,8 @@ SECTION = re.compile(
     rf"\b(?:Sections?|Sec\.|S\.)\s+(?P<s>\d+[A-Z]?)(?:\(\d+\))*(?:\s+Part\s+I{{1,2}})?"
     rf"\s+(?:of\s+the\s+)?(?P<act>{_ACT_RX})",
 )
-ARTICLE = re.compile(r"\bArticle\s+(?P<s>\d+[A-Z]?)(?:\(\d+\))?\s+of\s+the\s+Constitution")
+# "Article 21", "Art. 21", "Arts. 14": in Indian judgments a bare "Article N" is the Constitution.
+ARTICLE = re.compile(r"\bArt(?:icles?|s?\.)\s*(?P<s>\d{1,3}[A-Z]{0,2})\b(?:\(\d+\))?")
 
 # 🔍 Verify against the official correspondence tables before relying on these.
 ALIASES: list[tuple[tuple[str, str], tuple[str, str]]] = [
