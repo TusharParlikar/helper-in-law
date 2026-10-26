@@ -72,8 +72,33 @@ blockquote {{ margin: 12px 0 10px; padding: 2px 0 2px 14px; border-left: 2px sol
 sup a {{ color: var(--navy) !important; text-decoration: none !important; font-weight: 600; font-size: .72rem;
   padding: 0 3px; }}
 .empty {{ text-align:center; padding: 40px 20px; color: var(--muted); }}
-.empty h3 {{ color: var(--ink); margin-bottom: 6px; }}
+.emptyhead {{ font-family:'Source Serif 4',Georgia,serif; font-size: 1.4rem; font-weight: 600; color: var(--ink);
+  margin-bottom: 8px; }}
 .foot {{ color: var(--muted); font-size: .8rem; border-top: 1px solid var(--line); margin-top: 36px; padding-top: 14px; }}
+.card, blockquote, .point, h4 {{ overflow-wrap: anywhere; }}
+/* phones and small tablets */
+@media (max-width: 640px) {{
+  .block-container {{ padding: .6rem .9rem 2rem !important; }}
+  .brand {{ font-size: 1.2rem; }} .brand img {{ height: 28px; }}
+  .status, .kbd {{ display: none; }}
+  .hero {{ padding: 10px 0 4px; background: none; }}
+  .hero h1 {{ font-size: 1.65rem; }}
+  .hero h1[style] {{ font-size: 1.45rem !important; }}
+  .hero p {{ font-size: .97rem; }}
+  div[data-testid="stForm"] {{ padding: 12px 12px 4px; border-radius: 14px; box-shadow: none; }}
+  div[data-testid="stTextArea"] textarea, div[data-testid="stTextInput"] input {{ font-size: 16px !important; }}
+  div[data-testid="stFormSubmitButton"] button {{ width: 100%; height: 48px; }}
+  .card {{ padding: 14px 14px; border-radius: 12px; }}
+  .card:hover {{ box-shadow: none; }}
+  .prov h4, .case h4 {{ font-size: 1.02rem; }}
+  blockquote {{ font-size: .96rem; padding-left: 10px; }}
+  .point {{ gap: 8px; font-size: .96rem; }}
+  .summary {{ padding: 10px 12px; }}
+  .links a {{ display: inline-block; padding: 6px 0; margin-right: 14px; }}
+  sup a {{ padding: 4px 4px; }}
+  .label {{ margin: 20px 0 8px; }}
+  .empty {{ padding: 24px 14px; }} .emptyhead {{ font-size: 1.15rem; }}
+}}
 </style>
 """,
     unsafe_allow_html=True,
@@ -103,7 +128,7 @@ ss.setdefault("q", "")
 
 top_l, top_r = st.columns([3, 2], vertical_alignment="center")
 with top_r:
-    s1, s2 = st.columns([3, 1], vertical_alignment="center")
+    s1, s2 = st.columns([5, 2], vertical_alignment="center")
     with s2.popover("Settings", use_container_width=True):
         use_llm = st.toggle(
             "AI drafting (Ollama)",
@@ -217,13 +242,14 @@ def render(r: Response) -> None:
         unsafe_allow_html=True,
     )
     for n in r.notices:
+        if r.confidence == "not_found" and n.startswith("Not found in the indexed"):
+            continue  # the card below says it
         (st.warning if "overruled" in n.lower() or "conflict" in n.lower() else st.info)(n)
     if r.confidence == "not_found":
         st.markdown(
-            "<div class='card empty'><h3>Nothing in the indexed sources supports an answer</h3>"
+            "<div class='card empty'><div class='emptyhead'>Nothing in the indexed sources supports an answer</div>"
             "Helper in Law does not guess. Try describing the facts differently, or widen the year range."
-            + (f"<br><br>Closest documents: {escape('; '.join(r.nearest))}" if r.nearest else "")
-            + "</div>",
+            "</div>",
             unsafe_allow_html=True,
         )
         return
@@ -281,7 +307,11 @@ with research:
             "told the reason for his arrest…",
         )
         f1, f2 = st.columns([5, 1], vertical_alignment="center")
-        f1.caption("Press Ctrl + Enter or click Analyse. Facts stay on this machine.")
+        f1.markdown(
+            "<div class='meta'><span class='kbd'>Press Ctrl + Enter or click Analyse. </span>"
+            "Facts stay on this machine.</div>",
+            unsafe_allow_html=True,
+        )
         if f2.form_submit_button("Analyse", use_container_width=True):
             ss.q = typed.strip()
     pick = st.pills("Example situations", list(SCENARIOS), key="pick")
