@@ -2,44 +2,73 @@
 
 One core (`src/helperinlaw/service.py`), three thin adapters: REST (`api/`), MCP (`mcp_server/`), Streamlit (`ui/`). No logic lives in handlers.
 
-```
-data/sample/*.txt|pdf
-  -> ingest/  extract (quality score) -> clean -> parse/ (metadata, paragraphs, sections, statutes, citations)
-  -> core/store.py  SQLite: cases, paragraphs, statutes, citation graph
-  -> index/   paragraph-bounded chunks + FTS5 (BM25) + Ollama embeddings (nomic-embed-text)
+## Corpus
 
-question
-  -> retrieve/understand   filters, statutes, case names
-  -> retrieve/rewrite      IPC<->BNS / CrPC<->BNSS / IEA<->BSA alias queries
-  -> retrieve/hybrid       BM25 + dense, RRF fusion, metadata filters
-  -> retrieve/rerank       term coverage + statute match + profile boosts
-  -> retrieve/evidence_gate  weak evidence -> abstain (G7)
-  -> ground/claim_extract  Ollama (qwen3:1.7b) structured claims by source id + verbatim quote
-                           (extractive fallback: verbatim sentences)
-  -> ground/verify         schema, quote match, entities, entailment, allowlist, injection,
-                           role check, duplicates, conflicts, overruled graph
-  -> Verified Claim Set    (Stage A: style-independent, cached)
-  -> present/presenter     profile: depth, structure, tone, citation style (Stage B)
-  -> present/final_guard   no uncited block, no new numbers, no unknown case names
-  -> Response              answer blocks + DB-rendered citations + verification report + coverage
+| Source | Ingest | Stored as |
+|---|---|---|
+| The Constitution of India [As on 1st May, 2024], Legislative Department (official PDF) | `ingest/official.py`: English pages only, footnotes and running headers removed, one record per Article | `coi-<article>` documents, one paragraph each, linked to the exact PDF page |
+| Supreme Court judgments, Indian Supreme Court Judgments open dataset (CC-BY-4.0) | `ingest/sci.py`: per-year metadata tar, headnotes filtered for key Articles, PDF fetched, only the Court's own numbered paragraphs kept (editorial headnotes dropped) | `sc-<neutral citation>` documents with paragraphs, statutes and the citation graph |
+| Fictional sample judgments | `ingest/pipeline.py` | Used by the test suite only |
+
+Every ingest is idempotent and resumable; a document that cannot be parsed goes to the `dead_letter` table with its reason, never silently.
+
+## Answering a question
+
+```
+situation / question
+  -> retrieve/understand     filters, statutes, Articles, case names
+  -> retrieve/evidence_gate  no legal vocabulary at all -> "not found" (off-topic questions)
+  -> retrieve/rewrite        statute aliases (IPC<->BNS ...) + lay-to-legal terms
+                             ("not told why" -> "informed of the grounds", "lawyer" -> "legal practitioner")
+  -> retrieve/hybrid         BM25 (SQLite FTS5) [+ dense if embeddings exist], RRF fusion,
+                             run separately for Constitution articles and for judgments
+  -> retrieve/rerank         IDF-weighted coverage of the situation's most informative words,
+                             synonym groups, statute match, profile boosts
+  -> ground/pipeline         judgments (max 2 passages each) vote for the Articles they apply;
+                             evidence gate
+  -> ground/claim_extract    the governing Article's best clause + verbatim judgment sentences
+                             (or, with the LLM on, structured claims citing sources by id)
+  -> ground/verify           quote exists (exact, then word-aligned fuzzy), numbers/sections in the
+                             quote, entailment + negation scope, allowlist, injection, role check,
+                             duplicates, conflicts, overruled graph
+  -> Verified Claim Set      (Stage A: style-independent, cached)
+  -> present/presenter       depth, structure, tone, citation style (Stage B)
+  -> present/final_guard     no uncited block, no new numbers, no unknown case names
+  -> Response                answer + DB-rendered citations + verification report + laws + coverage
+  -> report.py               optional PDF research report; refused when there is no proof
 ```
 
 ## Grounding contract, where each rule lives
 
 | Rule | Code |
 |---|---|
-| G1 LLM never writes case names/citations | `ground/claim_extract.render_sources` (model sees only ids), `ground/render.py` |
+| G1 LLM never writes case names/citations | `ground/claim_extract.render_sources` (model sees only ids and the source kind), `ground/render.py` |
 | G2 every claim has source id + quote | `core/types.Claim` (`support` min length 1) |
-| G3 quote exists in cited chunk | `ground/verify/quote.py` (exact, then word-aligned fuzzy) |
-| G4 claim entailed by quote | `ground/verify/entail.py` (lexical judge; optional separate Ollama judge) |
+| G3 quote exists in cited chunk | `ground/verify/quote.py`; paragraph markers `⟦n⟧` so report citations like "[1993] 2 SCR 581" are never read as paragraph numbers |
+| G4 claim entailed by quote | `ground/verify/entail.py` (lexical judge with negation scope; optional separate Ollama judge) |
 | G5 numbers/sections in the quote | `ground/verify/entities.py` |
 | G6 allowlist sanitiser | `ground/verify/allowlist.py`, `present/final_guard.py` |
 | G7 evidence gate | `retrieve/evidence_gate.py` |
 | G8 extractive fallback | `ground/pipeline.py` (`max_drop_ratio`) |
 | G9 source text is data | system prompt + `ground/verify/injection.py` |
-| G10 conflicts / overruled | `ground/verify/graph.py`, `verify.conflicts` |
+| G10 conflicts / overruled | `ground/verify/graph.py` over the citation graph (SCR / INSC / reporter citations resolved at ingest) |
 | G11 no answers from memory | G2 + G3 + G6 together |
 | G12 verification report | `core/types.VerificationReport` on every `Response` |
+
+Displayed quotes are always the record's own sentences (`verify/quote.source_span`), never the model's copy.
+
+## Storage
+
+SQLite (`core/store.py`): one connection per thread, WAL mode and a busy timeout, so the API's thread pool, the UI and a running ingest can share the database. FTS5 provides BM25; vectors are stored as blobs and searched by brute-force cosine.
+
+## Measured choices
+
+| Choice | Measured on | Result |
+|---|---|---|
+| Chunking: paragraph groups of ~300 words | 47-scenario benchmark | Best of 150 / 300 / 450 words and one-paragraph chunks (top Article 81%, precedent 89%) |
+| Precedent vote not weighted by Article rarity | same | Rarity weighting lowered accuracy (72% -> 64% at the time); removed |
+| Second Article shown only within 85% of the first's score | same | Precision of Articles shown 47% -> 66%, one scenario lost |
+| Legal-vocabulary gate | 8 out-of-scope questions | 100% refused, no answerable scenario lost |
 
 ## Phase 1 substitutions (deliberate)
 
@@ -47,6 +76,6 @@ question
 |---|---|---|
 | Postgres + Qdrant + Redis + MinIO | SQLite (FTS5 + vectors as blobs), in-process cache, local files | corpus > ~100k chunks or multi-user (Phase 2) |
 | Claude + separate judge | Ollama `qwen3:1.7b`; lexical judge by default, `HIL_JUDGE_MODEL` for an LLM judge | a stronger local or hosted model is available |
-| bge-m3 + bge-reranker | `nomic-embed-text` via Ollama + lexical reranker | GPU available |
-| LLM multi-query rewrite | statute-alias rewrite | eval shows vocabulary misses |
-| OCR fallback | low-quality extraction goes to dead letters | scanned judgments enter the corpus |
+| bge-m3 + bge-reranker | keyword retrieval + lexical reranker (dense optional via Ollama) | GPU available |
+| LLM multi-query rewrite | statute-alias + lay-to-legal rewrite | eval shows vocabulary misses |
+| OCR fallback | not needed so far: every e-SCR PDF has a text layer; unreadable files would be dead-lettered | scanned judgments enter the corpus |
