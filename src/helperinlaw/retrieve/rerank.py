@@ -5,6 +5,7 @@ GPU is available; the boosts stay.
 """
 
 import math
+import threading
 from collections import Counter
 from functools import lru_cache
 
@@ -29,6 +30,7 @@ def stem(t: str) -> str:
 
 MAX_TERMS = 10  # a long scenario is judged on its most distinctive words, not all of them
 _IDF: dict[tuple[int, str, int], dict[str, float]] = {}
+_IDF_LOCK = threading.Lock()  # concurrent first requests build the table once, not once each
 
 
 def idf_table(store: Store, index_version: str) -> dict[str, float]:
@@ -37,13 +39,14 @@ def idf_table(store: Store, index_version: str) -> dict[str, float]:
         "SELECT COUNT(*) FROM chunks WHERE index_version=?", (index_version,)
     ).fetchone()[0]
     key = (id(store), index_version, n)
-    if key not in _IDF:
-        df: Counter[str] = Counter()
-        for c in store.all_chunks(index_version):
-            df.update({stem(t) for t in terms(c.prefix + " " + c.text)})
-        _IDF.clear()
-        _IDF[key] = {t: math.log((n + 1) / (k + 0.5)) for t, k in df.items()}
-    return _IDF[key]
+    with _IDF_LOCK:
+        if key not in _IDF:
+            df: Counter[str] = Counter()
+            for c in store.all_chunks(index_version):
+                df.update({stem(t) for t in terms(c.prefix + " " + c.text)})
+            _IDF.clear()
+            _IDF[key] = {t: math.log((n + 1) / (k + 0.5)) for t, k in df.items()}
+        return _IDF[key]
 
 
 def groups(query: str) -> dict[str, set[str]]:
