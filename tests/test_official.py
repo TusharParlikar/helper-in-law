@@ -115,3 +115,13 @@ def test_first_paragraph_on_the_authors_line() -> None:
         "2. Brief facts follow.\n3. We hold so."
     )
     assert [n for n, _ in judgment_paragraphs(text)] == [1, 2, 3]
+
+
+def test_unnumbered_first_paragraph_and_2024_layout() -> None:
+    text = clean(
+        "Headnotes\nJudgment / Order of the Supreme Court\nJudgment\nR. Mahadevan, J.\nLeave granted.\n"
+        "2. This appeal is filed against the order of the High Court.\n3. We have heard both sides."
+    )
+    paras = judgment_paragraphs(text)
+    assert [n for n, _ in paras] == [1, 2, 3]
+    assert paras[0][1] == "Leave granted."  # the author's name line is not part of paragraph 1

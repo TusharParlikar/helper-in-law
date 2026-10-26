@@ -32,9 +32,12 @@ KEY_ARTICLES = re.compile(
 )
 FIRST_PARA = re.compile(r"(\bJ\.?\s*:?)\s+(1\.\s+[A-Z])")
 JUDGMENT_START = re.compile(
-    r"(The Judgment of the Court was delivered by|J\s*U\s*D\s*G\s*M\s*E\s*N\s*T\b|^\s*JUDGMENT\s*$)",
+    r"(Judgment\s*/\s*Order of the Supreme Court\s*\n\s*(?:Judgment|Order)\s*\n"  # 2024 e-SCR layout
+    r"|The Judgment of the Court was delivered by|J\s*U\s*D\s*G\s*M\s*E\s*N\s*T\b|^\s*JUDGMENT\s*$)",
     re.M,
 )
+AUTHOR_LINE = re.compile(r"^\s*[A-Z][A-Za-z.\s]{2,60},\s*(?:CJI|J)\.?\s*:?\s*$", re.M)
+NUMBERED = re.compile(r"^\s*(\d{1,4})\.\s", re.M)
 
 
 @dataclass
@@ -124,6 +127,12 @@ def judgment_paragraphs(text: str) -> list[tuple[int, str]]:
     body = text[m.end():] if m else text
     # Paragraph 1 often shares a line with the author: "R. K. AGRAWAL, J. 1. The jurisdiction..."
     body = FIRST_PARA.sub(r"\1\n\2", body, count=1)
+    # Many judgments leave paragraph 1 unnumbered ("Leave granted.") and print numbers from 2.
+    first = NUMBERED.search(body)
+    if first and first.group(1) == "2":
+        lead = AUTHOR_LINE.sub("", body[: first.start()]).strip()
+        if lead:
+            body = f"1. {lead}\n{body[first.start():]}"
     _, paras = split_paragraphs(body)
     return paras
 
