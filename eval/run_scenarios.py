@@ -2,6 +2,7 @@
 
 uv run python eval/run_scenarios.py          # verbatim mode (no LLM), as the app runs by default
 uv run python eval/run_scenarios.py --llm    # with the local LLM drafting claims
+uv run python eval/run_scenarios.py --heldout  # the held-out set, written before any tuning on it
 
 Each scenario is labelled with the Article(s) that govern it (eval/datasets/scenarios.jsonl).
 Labels are standard constitutional law, written by the developer; have a lawyer review them.
@@ -36,8 +37,9 @@ def pct(n: int, d: int) -> str:
 
 def main() -> None:
     use_llm = "--llm" in sys.argv
+    heldout = "--heldout" in sys.argv
     svc = Service(cfg=Settings(use_llm=use_llm))
-    scenarios, oos = load("scenarios"), load("out_of_scope")
+    scenarios, oos = load("scenarios_heldout" if heldout else "scenarios"), load("out_of_scope")
     rows, latencies = [], []
     unsupported = n_cites = bad_cites = lacking = 0
     for s in scenarios:
@@ -82,7 +84,7 @@ def main() -> None:
 
     cov = svc.coverage()
     lines = [
-        "# Scenario benchmark", "",
+        "# Scenario benchmark" + (" (held-out set)" if heldout else ""), "",
         f"- Mode: {'local LLM drafts, then verified' if use_llm else 'verbatim passages (no LLM)'}; "
         f"search: {'keyword + semantic' if svc.cfg.use_dense else 'keyword'}",
         f"- Corpus: {cov.corpus}",
@@ -110,7 +112,8 @@ def main() -> None:
     lines += [f"| {r['scenario'][:90]} | Art. {', '.join(r['articles'])} | "
               f"{', '.join('Art. ' + a for a in r['shown']) or 'none'} |" for r in misses]
     report = "\n".join(lines) + "\n"
-    out = ROOT / "eval" / "reports" / ("scenarios_llm.md" if use_llm else "scenarios.md")
+    name = "scenarios_heldout" if heldout else "scenarios"
+    out = ROOT / "eval" / "reports" / f"{name}{'_llm' if use_llm else ''}.md"
     out.write_text(report, encoding="utf-8")
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")

@@ -1,0 +1,30 @@
+{"scenario": "My client, a woman, was arrested after sunset by male officers and taken to the police station without being told the reason.", "articles": ["22", "21"], "area": "arrest and detention"}
+{"scenario": "The police detained my client for questioning for a week without arresting him formally or producing him before a court.", "articles": ["22", "21"], "area": "arrest and detention"}
+{"scenario": "An undertrial prisoner was kept in solitary confinement for months without any order.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "The state government is forcibly evicting pavement dwellers in the city without offering any rehabilitation.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "A prisoner sentenced to death has been waiting for over ten years for his mercy petition to be decided.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "A district has had no doctors in its public health centres for a year and patients are dying.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "The government is collecting citizens' biometric data and sharing it with private companies without consent.", "articles": ["21"], "area": "life and personal liberty"}
+{"scenario": "My client was convicted on the basis of a confession he made to the police while in custody.", "articles": ["20", "21"], "area": "criminal process"}
+{"scenario": "My client has already been acquitted of theft and the prosecution now wants to try him again for the same theft.", "articles": ["20"], "area": "criminal process"}
+{"scenario": "A new law increases the punishment for an offence and the prosecution wants to apply it to an act committed before the law was passed.", "articles": ["20"], "area": "criminal process"}
+{"scenario": "A university suspended a student for posting a satirical cartoon about the vice-chancellor.", "articles": ["19"], "area": "speech and expression"}
+{"scenario": "The state ordered a newspaper to submit all its articles for approval before publication.", "articles": ["19"], "area": "speech and expression"}
+{"scenario": "Street vendors have been banned from selling anywhere in the market area of the town.", "articles": ["19", "21"], "area": "trade and occupation"}
+{"scenario": "Lawyers in a district have been forbidden from forming an association.", "articles": ["19"], "area": "speech and expression"}
+{"scenario": "Two employees with identical qualifications doing the same job are on different pay scales only because they were recruited in different years.", "articles": ["14", "39"], "area": "equality"}
+{"scenario": "A government tender was cancelled after it was awarded, without any reasons, to give it to another bidder.", "articles": ["14"], "area": "equality"}
+{"scenario": "A rule gives a benefit to widows of soldiers who died before a cut-off date but not to those who died after it.", "articles": ["14"], "area": "equality"}
+{"scenario": "A housing society refuses to sell flats to people of a particular religion.", "articles": ["15"], "area": "discrimination"}
+{"scenario": "A state reserved a share of medical college seats for residents of the state, and my client from another state was excluded.", "articles": ["15", "14"], "area": "discrimination"}
+{"scenario": "Women officers were denied permanent commission in the armed forces while men in the same posts were granted it.", "articles": ["14", "15", "16"], "area": "public employment"}
+{"scenario": "A government department refuses to appoint candidates with a disability even though they are qualified.", "articles": ["14", "16"], "area": "public employment"}
+{"scenario": "A permanent government teacher was removed from service by an officer lower in rank than the one who appointed him.", "articles": ["311"], "area": "service law"}
+{"scenario": "Migrant workers at a construction site are paid less than the minimum wage and cannot leave until they repay advances.", "articles": ["23"], "area": "exploitation"}
+{"scenario": "Children are working in a glass factory where they handle furnaces.", "articles": ["24"], "area": "exploitation"}
+{"scenario": "The police stopped a community from performing a religious procession that they had performed for decades.", "articles": ["25", "19"], "area": "religion"}
+{"scenario": "A state law requires prior permission from the district magistrate before anyone changes their religion.", "articles": ["25", "21"], "area": "religion"}
+{"scenario": "The state cancelled the recognition of a linguistic minority school because it refused to admit students from outside the community.", "articles": ["30"], "area": "minority rights"}
+{"scenario": "A state has not set up enough schools for children in tribal areas and many children are out of school.", "articles": ["21A"], "area": "education"}
+{"scenario": "The municipality demolished my client's shop and took over the land without any acquisition proceedings.", "articles": ["300A"], "area": "property"}
+{"scenario": "My client's fundamental right to equality was violated by a central government order and he wants a remedy directly from the Supreme Court.", "articles": ["32", "14"], "area": "writs"}
