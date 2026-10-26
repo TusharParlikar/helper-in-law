@@ -122,8 +122,6 @@ SCENARIOS = {
     "The State has no old age home or pension scheme in her district. Can she claim a right to live with dignity?",
     "Unequal treatment in a scheme": "A state scheme gives benefits to one group of employees but excludes another "
     "group doing identical work, with no reason given. My client wants to challenge it.",
-    "Temple entry ban": "Women of a certain age group are barred by custom from entering a public temple. "
-    "My client wants to challenge the ban as unconstitutional.",
     "Speech restriction": "My client posted criticism of a government policy online and the authorities "
     "ordered the post removed and threatened action. Is her freedom of speech protected?",
 }
