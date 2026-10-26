@@ -3,16 +3,18 @@
 from helperinlaw.core import ollama
 from helperinlaw.core.logging import get_logger
 from helperinlaw.core.store import Store
-from helperinlaw.index.chunker import chunk_case
+from helperinlaw.index.chunker import MAX_WORDS, chunk_case
 
 log = get_logger(__name__)
 BATCH = 32
 
 
-def build(store: Store, index_version: str, dense: bool) -> dict[str, int]:
+def build(store: Store, index_version: str, dense: bool, max_words: int = MAX_WORDS) -> dict[str, int]:
     """Side-by-side rebuild: a new index_version never touches the one being served."""
     chunks = [
-        c for case in store.list_cases() for c in chunk_case(case, store.get_paragraphs(case.id))
+        c
+        for case in store.list_cases()
+        for c in chunk_case(case, store.get_paragraphs(case.id), max_words)
     ]
     store.replace_chunks(index_version, chunks)
     embedded = 0

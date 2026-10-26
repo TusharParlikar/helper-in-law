@@ -7,12 +7,14 @@ from helperinlaw.core.config import settings
 from helperinlaw.core.logging import setup_logging
 from helperinlaw.core.store import Store
 from helperinlaw.index.build import build
+from helperinlaw.index.chunker import MAX_WORDS
 
 setup_logging()
 ap = argparse.ArgumentParser(description="Build a search index version")
 ap.add_argument("command", choices=["build"])
 ap.add_argument("--version", default=settings.index_version)
 ap.add_argument("--no-dense", action="store_true", help="skip Ollama embeddings (BM25 only)")
+ap.add_argument("--max-words", type=int, default=MAX_WORDS, help="chunk size; 1 = one paragraph per chunk")
 args = ap.parse_args()
 dense = settings.use_dense and not args.no_dense
-print(json.dumps(build(Store(settings.db_path), args.version, dense)))
+print(json.dumps(build(Store(settings.db_path), args.version, dense, args.max_words)))
