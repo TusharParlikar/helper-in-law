@@ -5,9 +5,11 @@ ponytail: SQLite + FTS5 + brute-force vectors stand in for Postgres + Qdrant in 
 Phase 1. Move to Postgres/Qdrant when the corpus outgrows one process (~100k chunks).
 """
 
+import itertools
 import json
 import sqlite3
 import struct
+import threading
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -58,6 +60,9 @@ CREATE TABLE IF NOT EXISTS eval_runs (
 """
 
 
+_MEMORY_IDS = itertools.count()
+
+
 def pack(vec: list[float]) -> bytes:
     return struct.pack(f"{len(vec)}f", *vec)
 
@@ -67,12 +72,36 @@ def unpack(blob: bytes) -> list[float]:
 
 
 class Store:
+    """One SQLite connection per thread (the API serves requests on a thread pool, and a single
+    connection must not be used by two threads at once). File databases run in WAL mode so a
+    writer (ingest) and readers (API, UI) don't block each other."""
+
     def __init__(self, path: str | Path) -> None:
-        if str(path) != ":memory:":
+        if str(path) == ":memory:":
+            # private to this Store, but shared by its threads
+            self._target, self._uri = f"file:hil-mem-{next(_MEMORY_IDS)}?mode=memory&cache=shared", True
+        else:
             Path(path).parent.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(str(path), check_same_thread=False)
-        self.db.row_factory = sqlite3.Row
-        self.db.executescript(SCHEMA)
+            self._target, self._uri = str(path), False
+        self._local = threading.local()
+        self._keeper = self._connect()  # also keeps an in-memory database alive
+        self._keeper.executescript(SCHEMA)
+        self._local.db = self._keeper
+
+    def _connect(self) -> sqlite3.Connection:
+        db = sqlite3.connect(self._target, uri=self._uri, timeout=30, check_same_thread=False)
+        db.row_factory = sqlite3.Row
+        if not self._uri:
+            db.execute("PRAGMA journal_mode=WAL")
+        db.execute("PRAGMA busy_timeout=30000")
+        return db
+
+    @property
+    def db(self) -> sqlite3.Connection:
+        db: sqlite3.Connection | None = getattr(self._local, "db", None)
+        if db is None:
+            db = self._local.db = self._connect()
+        return db
 
     # --- cases & paragraphs ---------------------------------------------
 

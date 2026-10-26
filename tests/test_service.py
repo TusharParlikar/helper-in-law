@@ -109,3 +109,31 @@ def test_feedback_suggests_but_never_changes(service: Service) -> None:
         out = service.feedback(1, -1, "too_long", profile_id="fb")
     assert out["suggestion"] and "Quick" in out["suggestion"]
     assert service.get_profile("fb").depth == "standard"
+
+
+def test_concurrent_requests_on_a_file_database(tmp_path, store) -> None:  # type: ignore[no-untyped-def]
+    """Regression: the API serves requests on a thread pool; one shared SQLite connection
+    raised 'bad parameter or other API misuse' under concurrent asks."""
+    import threading
+
+    from helperinlaw.core.config import Settings
+    from helperinlaw.core.store import Store
+
+    db = Store(tmp_path / "c.db")
+    store.db.backup(db.db)  # copy the test corpus into a real file database
+    svc = Service(db, Settings(use_llm=False, use_dense=False))
+    errors: list[BaseException] = []
+
+    def ask() -> None:
+        try:
+            for _ in range(3):
+                svc.ask(BAIL)
+        except BaseException as e:  # noqa: BLE001 - any failure fails the test
+            errors.append(e)
+
+    threads = [threading.Thread(target=ask) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert not errors, errors[:1]
