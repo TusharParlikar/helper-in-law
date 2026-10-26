@@ -2,6 +2,7 @@
 
 Judgment links open the API's reader pages, so keep `python -m helperinlaw.api` running too."""
 
+from datetime import datetime
 from html import escape
 
 import streamlit as st
@@ -9,6 +10,7 @@ from art import colonnade, mark
 
 from helperinlaw.core.config import Settings
 from helperinlaw.core.types import Citation, Filters, Response
+from helperinlaw.report import build_report, has_proof
 from helperinlaw.service import Service
 
 st.set_page_config(
@@ -46,6 +48,9 @@ div[data-testid="stFormSubmitButton"] button {{ border-radius: 999px !important;
   border: none !important; }}
 div[data-testid="stFormSubmitButton"] button:hover {{ background: #173052 !important; }}
 .stButton button, div[data-testid="stPopover"] button {{ border-radius: 999px !important; }}
+div[data-testid="stDownloadButton"] button {{ border-radius: 999px !important; background: var(--navy) !important;
+  border: none !important; color: #fff !important; font-weight: 600; margin-top: 10px; }}
+div[data-testid="stDownloadButton"] button:hover {{ background: #173052 !important; }}
 .label {{ text-transform: uppercase; letter-spacing: .08em; font-size: .72rem; font-weight: 600;
   color: var(--muted); margin: 26px 0 10px; }}
 .summary {{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding: 14px 18px;
@@ -87,7 +92,7 @@ sup a {{ color: var(--navy) !important; text-decoration: none !important; font-w
   .hero p {{ font-size: .97rem; }}
   div[data-testid="stForm"] {{ padding: 12px 12px 4px; border-radius: 14px; box-shadow: none; }}
   div[data-testid="stTextArea"] textarea, div[data-testid="stTextInput"] input {{ font-size: 16px !important; }}
-  div[data-testid="stFormSubmitButton"] button {{ width: 100%; height: 48px; }}
+  div[data-testid="stFormSubmitButton"] button, div[data-testid="stDownloadButton"] button {{ width: 100%; height: 48px; }}
   .card {{ padding: 14px 14px; border-radius: 12px; }}
   .card:hover {{ box-shadow: none; }}
   .prov h4, .case h4 {{ font-size: 1.02rem; }}
@@ -241,6 +246,15 @@ def render(r: Response) -> None:
         f" · {mode}</span></div>",
         unsafe_allow_html=True,
     )
+    if has_proof(r):  # a report only when there is verified proof to put in it
+        st.download_button(
+            "Download research report (PDF)",
+            data=build_report(r, ss.q, svc.store),
+            file_name=f"helper-in-law-report-{datetime.now():%Y%m%d-%H%M}.pdf",
+            mime="application/pdf",
+            type="primary",
+            icon=":material/description:",
+        )
     for n in r.notices:
         if r.confidence == "not_found" and n.startswith("Not found in the indexed"):
             continue  # the card below says it
