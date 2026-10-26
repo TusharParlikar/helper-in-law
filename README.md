@@ -48,7 +48,7 @@ It answers **only** from those sources. Every statement carries the exact quote 
 | Source | What | Licence |
 |---|---|---|
 | The Constitution of India [As on 1st May, 2024], Legislative Department | All articles, each linked to its page in the official PDF | Official Government publication |
-| Indian Supreme Court Judgments (AWS Open Data, Dattam Labs) | Supreme Court judgments applying key fundamental-rights articles (default: 150 from 2014-2024) | CC-BY-4.0 |
+| Indian Supreme Court Judgments (AWS Open Data, Dattam Labs) | Supreme Court judgments applying key fundamental-rights articles (384 from 2014-2024 in the measured build) | CC-BY-4.0 |
 
 It is exposed three ways, all backed by one core service:
 
@@ -136,39 +136,59 @@ REST, MCP and the UI all call one function layer (`service.py`). No business log
 
 ## Results
 
-Measured on the live corpus: the **Constitution of India** (461 articles, official text as on 1 May 2024) and **150 Supreme Court judgments** (2020-2024). The benchmark is 47 lawyer-style scenarios, each labelled with the Article(s) that govern it, across 15 areas of constitutional law, plus 8 out-of-scope questions. Default mode: verbatim passages, keyword search, no LLM.
+Measured on the live corpus: the **Constitution of India** (461 articles, official text as on 1 May 2024) and **384 Supreme Court judgments** (2014-2024, 8,814 indexed passages). Two benchmarks of lawyer-style scenarios, each labelled with the Article(s) that govern it, plus 8 out-of-scope questions. Default mode: verbatim passages, keyword search, no LLM. Full write-up: [`eval/reports/phase1.md`](eval/reports/phase1.md).
 
 **Finding the law**
 
-| Measure | Result |
-|---|---|
-| Correct Article shown for the situation | **91%** (43/47) |
-| Correct Article is the first one shown | **72%** (34/47) |
-| Articles shown that are on point (precision) | **66%** (43/65) |
-| A cited Supreme Court judgment applies that Article | **81%** (38/47) |
-| Out-of-scope questions refused ("not found", no guessing) | **100%** (8/8) |
-| Median / 95th-percentile answer time | 0.9 s / 1.4 s |
+| Measure | Dev set (47, tuned on) | Held-out set (30, run once) |
+|---|---|---|
+| Correct Article shown for the situation | **89%** (42/47) | **53%** (16/30) |
+| Correct Article is the first one shown | **79%** (37/47) | **47%** (14/30) |
+| Articles shown that are on point (precision) | **63%** (42/67) | **44%** (16/36) |
+| A cited Supreme Court judgment applies that Article | **83%** (39/47) | **63%** (19/30) |
+| Out-of-scope questions refused ("not found", no guessing) | **100%** (8/8) | **100%** (8/8) |
+| Median / 95th-percentile answer time | 1.4 s / 2.0 s | 1.1 s / 2.2 s |
 
-Strongest areas (first Article correct): arrest and detention, speech and expression, public employment, trade and occupation (all 100%), life and personal liberty (92%). Weakest: equality / Article 14 and the single property scenario. A second Article is only quoted when it scores close to the first, which keeps off-point provisions out at the cost of one scenario (Article 21A ranked a distant second). Every miss is listed in [`eval/reports/scenarios.md`](eval/reports/scenarios.md).
+The held-out set was written after tuning and run exactly once. The gap is the honest measure of how much the lay-to-legal vocabulary was fitted to the dev set: on new wording the system finds the right Article about half the time. It still never shows an unsupported statement. Every miss is listed in [`eval/reports/scenarios.md`](eval/reports/scenarios.md) and [`eval/reports/scenarios_heldout.md`](eval/reports/scenarios_heldout.md).
 
 **Grounding: what is shown is what the record says**
 
 | Measure | Result |
 |---|---|
-| Unsupported statements displayed | **0** (of 211 quoted passages across 47 answers) |
-| Quotes found verbatim at the cited paragraph | **100%** (211/211), checked independently against the stored text |
+| Unsupported statements displayed | **0** (dev and held-out, 382 quoted passages across 77 answers) |
+| Quotes found verbatim at the cited paragraph | **100%** (240/240 dev, 142/142 held-out), checked independently against the stored text |
 | Answers without citations | **0** |
 | Fault injection: corrupted claims the verifier blocks | **100%** across 10 corruption types (fake case names, altered numbers, flipped meaning, removed negations, fabricated quotes...) |
 | Phase 1 gates (retrieval, abstain, false premise, prompt injection, style invariance) | **11/11 pass** ([`eval/reports/latest.md`](eval/reports/latest.md)) |
 
+**What each part contributes** ([`eval/reports/ablation.md`](eval/reports/ablation.md), dev set, one component off at a time)
+
+| Switched off | First Article correct | Precision |
+|---|---|---|
+| Nothing (full system) | 37/47 | 63% |
+| Precedent vote (judgments voting for the Articles they apply) | 18/47 | 30% |
+| Lay-to-legal vocabulary | 20/47 | 45% |
+| IDF weighting in the reranker | 32/47 | 55% |
+| Runner-up rule (always show 2 Articles) | 37/47 | 45% |
+| Legal-vocabulary gate | 37/47 | 63%, but only 5/8 out-of-scope refused |
+
+**Engineering checks**
+
+| Check | Result |
+|---|---|
+| Parser audit, 384 judgments ([`eval/reports/parse_audit.md`](eval/reports/parse_audit.md)) | 99% complete metadata, 100% paragraphs numbered 1..N, 3 headnote leaks, median 99% of text captured |
+| Local load test, 120 requests, 8 concurrent | 0 errors; warm 4.2 req/s, p95 2.3 s; cold start p95 8.8 s |
+| MCP server | Verified end to end over stdio and Streamable HTTP with the official MCP Python client (`tests/test_mcp_protocol.py`) |
+| Test suite | 82 passing |
+
 **Read these numbers honestly**
 
 - The scenario labels are standard constitutional law written by the developer and **have not yet been reviewed by a lawyer**.
-- 47 scenarios is a small sample. With 0 failures in 47 answers, the 95% upper bound on the true unsupported-answer rate is about 3/47, roughly 6%.
-- The lay-to-legal vocabulary and the evidence gate were tuned while looking at this benchmark. A fresh, held-out set of scenarios is needed for an unbiased figure (Phase 3).
-- The corpus holds 150 judgments; a scenario whose leading precedent is not among them can still get the right Article but weaker case support.
+- The samples are small (47 + 30). With 0 unsupported statements in 77 answers, the 95% upper bound on the true rate is about 4%.
+- With the LLM on (Ollama `qwen3:1.7b`, CPU) answers take about a minute; the 10-second target holds only in the default verbatim mode.
+- 384 judgments is a small corpus; a scenario whose leading precedent is not in it can still get the right Article but weaker case support.
 
-Reproduce: `uv run python eval/run_scenarios.py`. Building it found and fixed three real bugs: report citations such as "[1993] 2 SCR 581" being misread as paragraph numbers, a quote matcher that was very slow on long judgments, and off-topic questions matching common words.
+Reproduce: `uv run python eval/run_scenarios.py [--heldout]`, `eval/run_ablation.py`, `eval/run_parse_audit.py`, and `eval/load_test.py` against a local API. Building them found and fixed real bugs: report citations such as "[1993] 2 SCR 581" being misread as paragraph numbers, a slow quote matcher, off-topic questions matching common words, HTTP 500s from a shared SQLite connection under concurrent requests, and a 106-second cold start from every first request rebuilding the same index statistics.
 
 ---
 
@@ -176,13 +196,13 @@ Reproduce: `uv run python eval/run_scenarios.py`. Building it found and fixed th
 
 | Phase | Goal | Status |
 |---|---|---|
-| **1. Build it for real** | Full pipeline, grounded answers, adaptive style, API + UI + **MCP**. **No auth** (single-user, localhost) | 🚧 In progress |
+| **1. Build it for real** | Full pipeline, grounded answers, adaptive style, API + UI + **MCP**. **No auth** (single-user, localhost) | ✅ Complete ([report](eval/reports/phase1.md)) |
 | **2. Production-ready** | Auth (OAuth 2.1), scale, observability, automated data refresh, compliance, deployment | ⏳ Planned |
 | **3. Intensive testing** | Red-team, hallucination campaign, expert review, MCP conformance, load/chaos, pen-test | ⏳ Planned |
 
 Phase 1 checklist:
 
-- [x] M1 Foundations (uv, ruff, mypy, pytest, pre-commit, Makefile, CI, licence log)
+- [x] M1 Foundations (uv, ruff, mypy, pytest, pre-commit, Makefile, licence log; CI deferred)
 - [x] M2 Ingestion (quality gate, cleaner, idempotent, dead-letter queue)
 - [x] M3 Parsing and structure (metadata, paragraphs, sections, statutes + aliases, citation treatment)
 - [x] M4 Indexing (paragraph-bounded chunks, FTS5, Ollama embeddings, versioned)
@@ -193,7 +213,7 @@ Phase 1 checklist:
 - [x] M9 MCP server (stdio + Streamable HTTP, localhost)
 - [x] M10 Tests, fault injection, evaluation report ([`eval/reports/latest.md`](eval/reports/latest.md))
 
-Phase 1 runs on a **fictional sample corpus** (`data/sample/`, 8 judgments written for testing). Swapping in a real corpus needs a licensed source; see [`docs/licence-log.md`](docs/licence-log.md). Deliberate Phase 1 substitutions (SQLite for Postgres/Qdrant, Ollama for hosted models) are listed in [`docs/architecture.md`](docs/architecture.md).
+Phase 1 runs on real, openly licensed sources: the official Constitution of India and Supreme Court judgments from the CC-BY-4.0 open dataset (see [`docs/licence-log.md`](docs/licence-log.md)). The fictional sample corpus in `data/sample/` is used only by the test suite. Deliberate Phase 1 substitutions (SQLite for Postgres/Qdrant, Ollama for hosted models) are listed in [`docs/architecture.md`](docs/architecture.md).
 
 Full plan: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
