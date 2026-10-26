@@ -30,12 +30,26 @@ RAW = Path("data/raw/sci")
 KEY_ARTICLES = re.compile(
     r"\bArt(?:icle|s?\.)\s*(14|15|16|19|20|21|21A|22|25|32|226|300A|311)\b", re.I
 )
-FIRST_PARA = re.compile(r"(\bJ\.?\s*:?)\s+(1\.\s+[A-Z])")
-JUDGMENT_START = re.compile(
-    r"(Judgment\s*/\s*Order of the Supreme Court\s*\n\s*(?:Judgment|Order)\s*\n"  # 2024 e-SCR layout
-    r"|The Judgment of the Court was delivered by|J\s*U\s*D\s*G\s*M\s*E\s*N\s*T\b|^\s*JUDGMENT\s*$)",
-    re.M,
-)
+FIRST_PARA = re.compile(r"(\b(?:CJI|J)\.?\s*:?)\s+(1\.\s+[A-Z])")
+NEW_LAYOUT = re.compile(r"Judgment\s*/\s*Order of the Supreme Court\s*\n\s*(?:Judgment|Order)\s*\n")  # 2024
+JURISDICTION = re.compile(r"\b(?:CIVIL|CRIMINAL)?\s*(?:APPELLATE|ORIGINAL|ADVISORY)\s+JURISDICTION\b")
+DELIVERED = re.compile(r"(?:The\s+)?Judgments?\s+of\s+the\s+Court\s+(?:was|were)\s+delivered\s+by", re.I)
+SPACED = re.compile(r"^\s*J\s*U\s*D\s*G\s*M\s*E\s*N\s*T\s*$|^\s*JUDGMENT\s*$", re.M)
+
+
+def judgment_start(text: str) -> int:
+    """Where the Court's own text begins, after the editorial headnote. Older reports put an
+    "APPELLATE JURISDICTION" heading just before it; anything before that heading is headnote."""
+    if m := NEW_LAYOUT.search(text):
+        return m.end()
+    heads = list(JURISDICTION.finditer(text))
+    after = heads[-1].end() if heads else 0
+    for rx in (DELIVERED, SPACED):
+        if m := rx.search(text, after):
+            return m.end()
+    return after
+
+
 AUTHOR_LINE = re.compile(r"^\s*[A-Z][A-Za-z.\s]{2,60},\s*(?:CJI|J)\.?\s*:?\s*$", re.M)
 NUMBERED = re.compile(r"^\s*(\d{1,4})\.\s", re.M)
 
@@ -123,8 +137,7 @@ def year_metadata(year: int) -> list[Meta]:
 
 def judgment_paragraphs(text: str) -> list[tuple[int, str]]:
     """The Court's own numbered paragraphs, after the editorial headnote."""
-    m = JUDGMENT_START.search(text)
-    body = text[m.end():] if m else text
+    body = text[judgment_start(text):]
     # Paragraph 1 often shares a line with the author: "R. K. AGRAWAL, J. 1. The jurisdiction..."
     body = FIRST_PARA.sub(r"\1\n\2", body, count=1)
     # Many judgments leave paragraph 1 unnumbered ("Leave granted.") and print numbers from 2.
@@ -154,6 +167,27 @@ def ingest_judgment(store: Store, meta: Meta) -> str:
     store.add_case(case, [Paragraph(case_id=case_id, n=n, text=t, section=label(t, n)) for n, t in paras])
     store.add_statutes(case_id, extract_statutes(" ".join(t for _, t in paras)))
     return "ingested"
+
+
+def reparse(store: Store) -> dict[str, int]:
+    """Re-run paragraph parsing on already-ingested judgments from their cached PDFs (after a
+    parser fix). Updates paragraphs and statutes in place; metadata is unchanged."""
+    changed = unchanged = 0
+    for case in store.list_cases():
+        if not case.id.startswith("sc-"):
+            continue
+        pdf = RAW / f"{Path(case.url).stem.removesuffix('_EN')}.pdf"
+        if not pdf.exists():
+            continue
+        paras = judgment_paragraphs(clean(extract_text(pdf)))
+        old = [(p.n, p.text) for p in store.get_paragraphs(case.id)]
+        if len(paras) < 3 or paras == old:
+            unchanged += 1
+            continue
+        store.add_case(case, [Paragraph(case_id=case.id, n=n, text=t, section=label(t, n)) for n, t in paras])
+        store.add_statutes(case.id, extract_statutes(" ".join(t for _, t in paras)))
+        changed += 1
+    return {"reparsed": changed, "unchanged": unchanged}
 
 
 def ingest_sci(store: Store, years: range, limit: int, pattern: re.Pattern[str] = KEY_ARTICLES) -> dict[str, int]:

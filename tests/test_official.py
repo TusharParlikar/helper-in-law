@@ -125,3 +125,16 @@ def test_unnumbered_first_paragraph_and_2024_layout() -> None:
     paras = judgment_paragraphs(text)
     assert [n for n, _ in paras] == [1, 2, 3]
     assert paras[0][1] == "Leave granted."  # the author's name line is not part of paragraph 1
+
+
+def test_older_layout_headnote_is_not_the_judgment() -> None:
+    # Older reports number their headnote too; the judgment follows the jurisdiction heading.
+    text = clean(
+        "1. Held: the dismissal was valid. [Para 18] [710-F-G]\n2. Appeal allowed.\n"
+        "CIVIL APPELLATE JURISDICTION : Civil Appeal No. 263 of 2013.\nCounsel for the parties.\n"
+        "The Judgment of the Court was\ndelivered by\nALTAMAS KABIR, CJI. 1. The past decade has seen change.\n"
+        "2. We turn to the facts.\n3. The appeal is dismissed."
+    )
+    paras = judgment_paragraphs(text)
+    assert [n for n, _ in paras] == [1, 2, 3]
+    assert paras[0][1] == "The past decade has seen change."
