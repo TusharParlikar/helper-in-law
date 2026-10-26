@@ -92,6 +92,7 @@ How:
 - 📌 **Pinpoint citations** on every answer: case, court, date, paragraph, verbatim quote
 - ✅ **Verification report** on every response (claims proposed / verified / dropped)
 - 🧭 **Abstains** when the corpus doesn't support an answer
+- 📄 **Research report**: one click turns the verified proofs into a structured PDF (situation, summary, governing provisions, analysis, supporting judgments, table of authorities, limits). No proof, no report.
 - 📖 **Chat with a judgment**: Q&A scoped to a single case
 - 📜 **Statute lookup**: IPC↔BNS, CrPC↔BNSS, Evidence Act↔BSA aware
 - 🔗 **Citation treatment** (followed / distinguished / overruled) where available
@@ -141,20 +142,21 @@ Measured on the live corpus: the **Constitution of India** (461 articles, offici
 
 | Measure | Result |
 |---|---|
-| Correct Article shown for the situation | **94%** (44/47) |
+| Correct Article shown for the situation | **91%** (43/47) |
 | Correct Article is the first one shown | **72%** (34/47) |
-| A cited Supreme Court judgment applies that Article | **79%** (37/47) |
+| Articles shown that are on point (precision) | **66%** (43/65) |
+| A cited Supreme Court judgment applies that Article | **81%** (38/47) |
 | Out-of-scope questions refused ("not found", no guessing) | **100%** (8/8) |
 | Median / 95th-percentile answer time | 0.9 s / 1.4 s |
 
-Strongest areas (first Article correct): arrest and detention, speech and expression, public employment, trade and occupation (all 100%), life and personal liberty (92%). Weakest: equality / Article 14 (25%) and the single property scenario (0%). Every miss is listed in [`eval/reports/scenarios.md`](eval/reports/scenarios.md).
+Strongest areas (first Article correct): arrest and detention, speech and expression, public employment, trade and occupation (all 100%), life and personal liberty (92%). Weakest: equality / Article 14 and the single property scenario. A second Article is only quoted when it scores close to the first, which keeps off-point provisions out at the cost of one scenario (Article 21A ranked a distant second). Every miss is listed in [`eval/reports/scenarios.md`](eval/reports/scenarios.md).
 
 **Grounding: what is shown is what the record says**
 
 | Measure | Result |
 |---|---|
-| Unsupported statements displayed | **0** (of 225 quoted passages across 47 answers) |
-| Quotes found verbatim at the cited paragraph | **100%** (225/225), checked independently against the stored text |
+| Unsupported statements displayed | **0** (of 211 quoted passages across 47 answers) |
+| Quotes found verbatim at the cited paragraph | **100%** (211/211), checked independently against the stored text |
 | Answers without citations | **0** |
 | Fault injection: corrupted claims the verifier blocks | **100%** across 10 corruption types (fake case names, altered numbers, flipped meaning, removed negations, fabricated quotes...) |
 | Phase 1 gates (retrieval, abstain, false premise, prompt injection, style invariance) | **11/11 pass** ([`eval/reports/latest.md`](eval/reports/latest.md)) |
