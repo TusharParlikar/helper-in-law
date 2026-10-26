@@ -10,14 +10,15 @@
 | Measure | Result |
 |---|---|
 | Correct Article is the top provision shown | 72% (34/47) |
-| Correct Article among the provisions shown | 94% (44/47) |
-| A cited judgment applies that Article | 79% (37/47) |
+| Correct Article among the provisions shown | 91% (43/47) |
+| Provisions shown that are on point (precision) | 66% (43/65) |
+| A cited judgment applies that Article | 81% (38/47) |
 | Scenarios answered (not abstained) | 100% (47/47) |
 | Out-of-scope questions correctly refused | 100% (8/8) |
 | Unsupported statements displayed | **0** |
-| Quotes found verbatim at their cited paragraph | 100% (225/225) |
+| Quotes found verbatim at their cited paragraph | 100% (211/211) |
 | Answers without citations | **0** |
-| Latency p50 / p95 | 0.89 s / 1.4 s |
+| Latency p50 / p95 | 0.88 s / 1.55 s |
 
 ## By area
 
@@ -26,7 +27,7 @@
 | arrest and detention | 4 | 100% (4/4) | 100% (4/4) |
 | criminal process | 3 | 67% (2/3) | 100% (3/3) |
 | discrimination | 3 | 33% (1/3) | 100% (3/3) |
-| education | 2 | 50% (1/2) | 100% (2/2) |
+| education | 2 | 50% (1/2) | 50% (1/2) |
 | equality | 4 | 25% (1/4) | 75% (3/4) |
 | exploitation | 2 | 50% (1/2) | 100% (2/2) |
 | life and personal liberty | 12 | 92% (11/12) | 92% (11/12) |
@@ -39,10 +40,11 @@
 | trade and occupation | 2 | 100% (2/2) | 100% (2/2) |
 | writs | 2 | 50% (1/2) | 100% (2/2) |
 
-## Misses (3)
+## Misses (4)
 
 | Scenario | Expected | Shown |
 |---|---|---|
-| My client is an 80-year-old widow with no income, abandoned by her children, and the State | Art. 21 | Art. 15, Art. 39 |
-| A government order was passed arbitrarily, without reasons and without hearing the people  | Art. 14 | Art. 226, Art. 338 |
+| My client is an 80-year-old widow with no income, abandoned by her children, and the State | Art. 21 | Art. 15 |
+| A government order was passed arbitrarily, without reasons and without hearing the people  | Art. 14 | Art. 226 |
+| A private school refuses to admit children from poor families under the free seats quota. | Art. 21A | Art. 15 |
 | My client's land was taken by the State for a project without any law authorising it and w | Art. 300A | Art. 243ZQ, Art. 366 |
