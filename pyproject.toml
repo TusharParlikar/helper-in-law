@@ -16,7 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 pdf = ["pymupdf>=1.24"]
-ui = ["streamlit>=1.36"]
+ui = ["streamlit>=1.36", "fpdf2>=2.7"]
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10", "httpx>=0.27"]
