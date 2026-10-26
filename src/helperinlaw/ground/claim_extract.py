@@ -12,6 +12,7 @@ from helperinlaw.core.store import Store
 from helperinlaw.core.types import Claim, ClaimSet, Source, SupportRef
 from helperinlaw.ground.text import content_terms, paragraphs_of, sentences
 from helperinlaw.ingest.official import is_provision
+from helperinlaw.retrieve.rewrite import legal_expansion
 
 SYSTEM = """You are a legal research assistant for Indian law. The user is usually a lawyer describing a client's situation.
 Sources are of two kinds: kind="constitution" is the official text of an Article of the Constitution of India; kind="judgment" is a paragraph of a court judgment.
@@ -60,6 +61,7 @@ SCHEMA: dict[str, Any] = {
 
 MAX_CLAIMS = 8
 GOVERNING = 2  # provisions quoted per answer
+RUNNER_UP = 0.85  # share of the top provision's score a second one needs
 LLM_SOURCES = 5  # prompt size drives latency on small local models
 SECTION_TYPE = {"holding": "holding", "reasoning": "ratio", "facts": "fact", "provision": "statute"}
 SECTION_WEIGHT = {"facts": 0.6}  # prefer what the court held over the story
@@ -98,7 +100,12 @@ def extractive_claims(store: Store, question: str, sources: list[Source]) -> Cla
     by construction; the verifier still checks it."""
     q = content_terms(question)
     scored: list[tuple[float, Claim]] = []
-    governing = provision_claims(q, [s for s in sources if is_provision(s.chunk.case_id)][:GOVERNING])
+    expanded = q | content_terms(" ".join(legal_expansion(question)))
+    ranked = [s for s in sources if is_provision(s.chunk.case_id)][:GOVERNING]
+    # A further Article must score close to the best one; a distant second is usually off point
+    # (measured on eval/datasets/scenarios.jsonl).
+    ranked = [s for s in ranked if s.score >= RUNNER_UP * ranked[0].score] if ranked else []
+    governing = provision_claims(expanded, ranked)
     for src in sources:
         if is_provision(src.chunk.case_id):
             continue
@@ -147,5 +154,7 @@ def provision_claims(q: set[str], sources: list[Source]) -> list[Claim]:
         if not sents:
             continue
         sent = max(sents, key=lambda s: len(q & content_terms(s)))  # ties keep the first clause
+        if not q & content_terms(sent):
+            continue  # retrieved, but nothing in it touches this situation (e.g. how many judges)
         out.append(Claim(text=sent, type="statute", support=[SupportRef(source_id=src.id, quote=sent)]))
     return out
