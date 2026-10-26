@@ -52,11 +52,17 @@ def link_citations(store: Store) -> int:
     edges = 0
     for case in store.list_cases():
         paras = [(p.n, p.text) for p in store.get_paragraphs(case.id)]
-        resolved = []
+        # one edge per cited case: the same judgment cited by its SCR and its INSC citation
+        # counts once, with the strongest treatment seen
+        rank = {"overruled": 3, "distinguished": 2, "followed": 1, "unknown": 0}
+        best: dict[str, tuple[str, int]] = {}
         for cit, treatment, n in extract_citations(paras):
             target = store.resolve_citation(cit)
-            if target and target != case.id:
-                resolved.append((target, treatment, n))
+            if target and target != case.id and (
+                target not in best or rank[treatment] > rank[best[target][0]]
+            ):
+                best[target] = (treatment, n)
+        resolved = [(t, tr, n) for t, (tr, n) in best.items()]
         store.add_citations(case.id, resolved)
         edges += len(resolved)
     return edges

@@ -64,3 +64,14 @@ def test_citation_graph(store: Store) -> None:
         {"citing_id": "fs_2020_joshi", "treatment": "overruled", "para": 6}
     ]
     assert store.citing_cases("fs_2015_mehta")[0]["treatment"] == "followed"
+
+
+def test_real_report_citations_are_normalised() -> None:
+    from helperinlaw.parse.citations import extract_citations
+
+    paras = [(4, "As held in [2018] 13 SCR 1286 and in 2021 INSC 295, which we have followed."),
+             (9, "The view in [2017] 10 S.C.R. 569 is overruled.")]
+    got = {c: (t, n) for c, t, n in extract_citations(paras)}
+    assert got["[2018] 13 S.C.R. 1286"] == ("followed", 4)
+    assert got["2021 INSC 295"] == ("followed", 4)
+    assert got["[2017] 10 S.C.R. 569"] == ("overruled", 9)
