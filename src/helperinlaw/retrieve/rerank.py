@@ -6,6 +6,7 @@ GPU is available; the boosts stay.
 
 import math
 from collections import Counter
+from functools import lru_cache
 
 from helperinlaw.core.store import Store
 from helperinlaw.core.types import Chunk, Profile
@@ -16,6 +17,7 @@ from helperinlaw.retrieve.understand import Query, terms
 SUFFIXES = ("ations", "ation", "ments", "ment", "ings", "ing", "edly", "ies", "ed", "es", "ly", "s")
 
 
+@lru_cache(maxsize=200_000)  # pure and hot: called for every word of every candidate
 def stem(t: str) -> str:
     """Light suffix stripping: "arrested"/"arrest" match, "trademark" stays apart from "trade"."""
     for suf in SUFFIXES:

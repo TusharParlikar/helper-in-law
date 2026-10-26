@@ -1,6 +1,7 @@
 """Text helpers shared by the extractor and the verifiers."""
 
 import re
+from functools import lru_cache
 
 # Paragraph markers in chunk text. Not "[n]": judgments cite reports as "[1993] 2 SCR 581".
 PARA_MARK = re.compile(r"⟦(\d+)⟧\s*")
@@ -60,6 +61,7 @@ def paragraphs_of(chunk_text: str) -> list[tuple[int, str]]:
     ]
 
 
+@lru_cache(maxsize=200_000)  # pure and hot: called for every word of every candidate
 def stem(word: str) -> str:
     """Crude but consistent: "means"/"mean", "grounds"/"ground" share a stem."""
     if len(word) > 3 and word.endswith("s") and not word.endswith("ss"):
