@@ -69,6 +69,8 @@ SQLite (`core/store.py`): one connection per thread, WAL mode and a busy timeout
 | Precedent vote not weighted by Article rarity | same | Rarity weighting lowered accuracy (72% -> 64% at the time); removed |
 | Second Article shown only within 85% of the first's score | same | Precision of Articles shown 47% -> 66%, one scenario lost |
 | Legal-vocabulary gate | 8 out-of-scope questions | 100% refused, no answerable scenario lost |
+| Judgments from 2014 onward only | same, 506 vs 384 judgments | Older (2010-2013) reports have noisier OCR and headnote layouts; dropping them raised top Article 72% -> 79% and precedent 77% -> 83% |
+| Forum Articles (32, 136, 142, 226...) still vote | same | Excluding them from the vote changed nothing (33 vs 34/47) |
 
 ## Phase 1 substitutions (deliberate)
 
