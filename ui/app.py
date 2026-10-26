@@ -115,6 +115,7 @@ def service(use_llm: bool) -> Service:
     return Service(cfg=Settings(use_llm=use_llm))
 
 
+ONBOARD_SAMPLE = "My client was arrested at night and was not told the grounds of arrest or allowed to call a lawyer."
 SCENARIOS = {
     "Arrest without grounds": "My client was arrested at night by the police and kept in custody for two days. "
     "He was not told why he was arrested and was not allowed to call a lawyer.",
@@ -127,6 +128,17 @@ SCENARIOS = {
 }
 
 ss = st.session_state
+prof = service(False).get_profile()  # saved answer style: defaults for Settings and onboarding
+DEPTHS = {"quick": "Brief", "standard": "Standard", "deep": "Detailed"}
+FORMATS = {"bullets": "Points", "irac": "IRAC", "memo": "Memo"}
+TONES = {"technical": "Legal", "plain": "Plain"}
+ROLES = {
+    "advocate": "Advocate",
+    "student": "Law student",
+    "researcher": "Researcher",
+    "counsel": "In-house counsel",
+    "general": "Not a lawyer",
+}
 ss.setdefault("q", "")
 
 top_l, top_r = st.columns([3, 2], vertical_alignment="center")
@@ -142,23 +154,75 @@ with top_r:
         detail = st.segmented_control(
             "Detail",
             ["quick", "standard", "deep"],
-            default="standard",
+            default=prof.depth,
             format_func={"quick": "Brief", "standard": "Standard", "deep": "Detailed"}.get,
         )
         layout = st.segmented_control(
             "Format",
             ["bullets", "irac", "memo"],
-            default="bullets",
+            default=prof.structure if prof.structure in FORMATS else "bullets",
             format_func={"bullets": "Points", "irac": "IRAC", "memo": "Memo"}.get,
         )
         tone = st.segmented_control(
             "Language",
             ["technical", "plain"],
-            default="technical",
+            default=prof.tone if prof.tone in TONES else "technical",
             format_func={"technical": "Legal", "plain": "Plain"}.get,
         )
         years = st.slider("Judgments from", 1950, 2025, (1950, 2025))
 svc = service(use_llm)
+
+
+@st.dialog("How do you like your answers?", width="large")
+def onboarding() -> None:
+    st.caption(
+        "Pick a style and watch the same answer change. You can change it any time in Settings."
+    )
+    c1, c2 = st.columns(2)
+    role = c1.selectbox("You are", list(ROLES), format_func=ROLES.get)
+    depth = c2.segmented_control(
+        "Detail", list(DEPTHS), default="standard", format_func=DEPTHS.get, key="ob_d"
+    )
+    structure = c1.segmented_control(
+        "Format", list(FORMATS), default="bullets", format_func=FORMATS.get, key="ob_f"
+    )
+    tone = c2.segmented_control(
+        "Language", list(TONES), default="technical", format_func=TONES.get, key="ob_t"
+    )
+    style = {
+        "role": role,
+        "depth": depth or "standard",
+        "structure": structure or "bullets",
+        "tone": tone or "technical",
+    }
+    preview = service(False).ask(
+        ONBOARD_SAMPLE, style=style
+    )  # cached claims: only the style changes
+    points = "".join(
+        f"<div class='point'><span class='num'>{i + 1}</span><div>{escape(b.text.removeprefix('- '))}</div></div>"
+        for i, b in enumerate(preview.answer_blocks[:4])
+    )
+    st.markdown(
+        f"<div class='label'>Live preview</div><div class='meta'>{escape(ONBOARD_SAMPLE)}</div>"
+        f"<div class='card'>{points}</div>",
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        "The citations and verification stay the same whatever you choose; only the presentation changes."
+    )
+    b1, b2 = st.columns(2)
+    if b1.button("Save as my default", type="primary", use_container_width=True):
+        svc.update_profile("default", style)
+        ss.onboarded = True
+        st.rerun()
+    if b2.button("Skip", use_container_width=True):
+        svc.update_profile("default", {})  # remember that onboarding was seen
+        ss.onboarded = True
+        st.rerun()
+
+
+if prof.version == 1 and not ss.get("onboarded"):
+    onboarding()
 cov = svc.coverage()
 with top_l:
     st.markdown(
