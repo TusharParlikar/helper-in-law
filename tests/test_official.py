@@ -106,3 +106,12 @@ def test_article_lookup(service: Service, store: Store) -> None:
     assert {j["case_id"] for j in a["judgments"]} >= {"fs_2015_mehta"}
     law = service.lookup_statute("Article", "21")["law"]
     assert law["text"] and law["official_url"] == a["official_url"]
+
+
+def test_first_paragraph_on_the_authors_line() -> None:
+    text = clean(
+        "Headnote.\nThe Judgment of the Court was delivered by\n"
+        "R. K. AGRAWAL, J. 1. The jurisdiction of this Court has been invoked.\n"
+        "2. Brief facts follow.\n3. We hold so."
+    )
+    assert [n for n, _ in judgment_paragraphs(text)] == [1, 2, 3]

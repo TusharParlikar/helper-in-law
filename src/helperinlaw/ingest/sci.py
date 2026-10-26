@@ -30,6 +30,7 @@ RAW = Path("data/raw/sci")
 KEY_ARTICLES = re.compile(
     r"\bArt(?:icle|s?\.)\s*(14|15|16|19|20|21|21A|22|25|32|226|300A|311)\b", re.I
 )
+FIRST_PARA = re.compile(r"(\bJ\.?\s*:?)\s+(1\.\s+[A-Z])")
 JUDGMENT_START = re.compile(
     r"(The Judgment of the Court was delivered by|J\s*U\s*D\s*G\s*M\s*E\s*N\s*T\b|^\s*JUDGMENT\s*$)",
     re.M,
@@ -121,6 +122,8 @@ def judgment_paragraphs(text: str) -> list[tuple[int, str]]:
     """The Court's own numbered paragraphs, after the editorial headnote."""
     m = JUDGMENT_START.search(text)
     body = text[m.end():] if m else text
+    # Paragraph 1 often shares a line with the author: "R. K. AGRAWAL, J. 1. The jurisdiction..."
+    body = FIRST_PARA.sub(r"\1\n\2", body, count=1)
     _, paras = split_paragraphs(body)
     return paras
 
