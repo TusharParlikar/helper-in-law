@@ -8,7 +8,7 @@ Scope: everything Phase 1 of [`docs/ROADMAP.md`](../../docs/ROADMAP.md) asks for
 |---|---|
 | Constitution of India | 461 articles, official PDF (Legislative Department, as on 1 May 2024), each linked to its page |
 | Supreme Court judgments | 384, 2014-2024, CC-BY-4.0 open dataset; only the Court's own numbered paragraphs |
-| Index | v1, 8,814 passages of ~300 words on paragraph boundaries, SQLite FTS5 (BM25); dense embeddings not built |
+| Index | v1, 8,814 passages of ~300 words on paragraph boundaries, SQLite FTS5 (BM25); dense embeddings being built as index v2 (`all-minilm`) |
 | Interfaces | Streamlit UI (research, Constitution lookup, onboarding, PDF report), REST API, MCP server (stdio + Streamable HTTP) |
 | Tests | 82 passing |
 
@@ -25,7 +25,7 @@ Scope: everything Phase 1 of [`docs/ROADMAP.md`](../../docs/ROADMAP.md) asks for
 
 Details: [`scenarios.md`](scenarios.md), [`scenarios_heldout.md`](scenarios_heldout.md).
 
-The dev-to-held-out drop is the main finding. The lay-to-legal vocabulary (`retrieve/rewrite.py`) was written while reading dev misses; new phrasings fall outside it. The held-out set was not used for any change. Next lever, in order of expected gain: dense embeddings for vocabulary-independent recall (built in `index/build.py`, needs an embedding model), then a larger judgment corpus.
+The dev-to-held-out drop is the main finding. The lay-to-legal vocabulary (`retrieve/rewrite.py`) was written while reading dev misses; new phrasings fall outside it. The held-out set was not used for any change. Next lever, in order of expected gain: dense embeddings for vocabulary-independent recall (index v2, `all-minilm` via Ollama; adopted only if it beats keyword-only on the dev set, then checked once more on held-out), then a larger judgment corpus.
 
 ## Grounding
 
@@ -64,8 +64,8 @@ Verified end to end with the official MCP Python client over stdio and Streamabl
 
 | Item | Status |
 |---|---|
-| Answer time <= 10 s with the LLM on | Not met: about 60 s with `qwen3:1.7b` on CPU. Default verbatim mode meets it |
+| Answer time <= 10 s with the LLM on | Not met: 45-50 s with `qwen3:1.7b` on a laptop CPU (~9 tokens/s generation), after cutting the prompt to the best sentences and keeping the model loaded. Needs a GPU or hosted model. Verbatim mode, now the default for UI, API and MCP, meets it |
 | Lawyer review of benchmark labels | Not done; labels written by the developer |
-| Dense / hybrid retrieval | Code present, embeddings not built (no GPU); keyword only in all numbers above |
+| Dense / hybrid retrieval | Search made fast (~0.1 s per query); index v2 embeddings in progress; all numbers above are keyword only |
 | Held-out accuracy | 47% first Article; below the dev figure, see above |
 | CI | Deferred by decision |

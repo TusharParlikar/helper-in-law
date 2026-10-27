@@ -185,7 +185,7 @@ The held-out set was written after tuning and run exactly once. The gap is the h
 
 - The scenario labels are standard constitutional law written by the developer and **have not yet been reviewed by a lawyer**.
 - The samples are small (47 + 30). With 0 unsupported statements in 77 answers, the 95% upper bound on the true rate is about 4%.
-- With the LLM on (Ollama `qwen3:1.7b`, CPU) answers take about a minute; the 10-second target holds only in the default verbatim mode.
+- With the LLM on (Ollama `qwen3:1.7b`, CPU only) an answer takes about 45-50 s once the model is loaded. The prompt now carries only the three best-matching sentences per source (2,050 -> 1,277 tokens), but generation runs at about 9 tokens/s on a laptop CPU, so the 10-second target needs a GPU or a hosted model. Verbatim mode, the default everywhere, meets it.
 - 384 judgments is a small corpus; a scenario whose leading precedent is not in it can still get the right Article but weaker case support.
 
 Reproduce: `uv run python eval/run_scenarios.py [--heldout]`, `eval/run_ablation.py`, `eval/run_parse_audit.py`, and `eval/load_test.py` against a local API. Building them found and fixed real bugs: report citations such as "[1993] 2 SCR 581" being misread as paragraph numbers, a slow quote matcher, off-topic questions matching common words, HTTP 500s from a shared SQLite connection under concurrent requests, and a 106-second cold start from every first request rebuilding the same index statistics.
@@ -235,7 +235,7 @@ uv sync --extra ui
 
 # 3. Pull the local models
 ollama pull qwen3:1.7b
-ollama pull nomic-embed-text
+ollama pull all-minilm   # embeddings; nomic-embed-text is better but ~12x slower on CPU
 
 # 4. Configure (optional; defaults work)
 cp .env.example .env
@@ -250,7 +250,7 @@ uv run streamlit run ui/app.py          # Web UI
 uv run python -m helperinlaw.mcp_server # MCP (stdio)
 ```
 
-Without Ollama the system still works: retrieval falls back to BM25 and answers to verbatim extractive quotes (`HIL_USE_LLM=false`, `HIL_USE_DENSE=false`).
+Without Ollama the system still works: retrieval falls back to BM25 and answers are verbatim extractive quotes (the default). Set `HIL_USE_LLM=true` for model-drafted analysis.
 
 ---
 
@@ -380,8 +380,9 @@ Set in `.env` (see `.env.example`). All variables use the `HIL_` prefix.
 | `HIL_OLLAMA_URL` | Ollama server | `http://localhost:11434` |
 | `HIL_LLM_MODEL` | Claim extraction and translation | `qwen3:1.7b` |
 | `HIL_JUDGE_MODEL` | Entailment judge (must differ from the answer model); empty = deterministic lexical judge | empty |
-| `HIL_EMBED_MODEL` | Embeddings | `nomic-embed-text` |
-| `HIL_USE_LLM` / `HIL_USE_DENSE` | Turn the LLM / embeddings off (extractive, BM25) | `true` |
+| `HIL_EMBED_MODEL` | Embeddings (must match the model the index was built with) | `all-minilm` |
+| `HIL_USE_LLM` | Let the local model draft the analysis (every statement still verified) | `false` |
+| `HIL_USE_DENSE` | Use embeddings when the index has them (BM25 alone otherwise) | `true` |
 | `HIL_INDEX_VERSION` | Index version served | `v1` |
 | `HIL_EVIDENCE_MIN_SCORE` | Below this, the system abstains | `0.5` |
 | `HIL_BIND_HOST` | Server bind address | `127.0.0.1` |

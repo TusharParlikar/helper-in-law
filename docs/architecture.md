@@ -71,6 +71,12 @@ SQLite (`core/store.py`): one connection per thread, WAL mode and a busy timeout
 | Legal-vocabulary gate | 8 out-of-scope questions | 100% refused, no answerable scenario lost |
 | Judgments from 2014 onward only | same, 506 vs 384 judgments | Older (2010-2013) reports have noisier OCR and headnote layouts; dropping them raised top Article 72% -> 79% and precedent 77% -> 83% |
 | Forum Articles (32, 136, 142, 226...) still vote | same | Excluding them from the vote changed nothing (33 vs 34/47) |
+| Verbatim mode by default, LLM opt-in | Ollama timing counters, i5-1335U laptop CPU | `qwen3:1.7b` generates ~9 tokens/s: 45-50 s per drafted answer vs ~2 s verbatim |
+| LLM prompt: 3 best sentences per source | same | Prompt 2,050 -> 1,277 tokens; quotes stay verbatim (sentences are substrings of the chunk) |
+| Model kept loaded (`keep_alive` 30 min) | same | Avoids a ~15 s reload per answer |
+| IDF table built once, at API start, under a lock | Local load test, 8 concurrent | Fresh-server p95 106 s -> 8.8 s |
+| Embeddings: `all-minilm`, not `nomic-embed-text` | Embedding speed on the same CPU | ~0.2 s vs ~3 s per passage: ~35 min vs ~7 h for 8,814 passages |
+| Dense search: cached unit vectors, stdlib dot products | 8,814 x 384 vectors | ~0.1 s per query, one query embedding shared by both searches; no numpy dependency |
 
 ## Phase 1 substitutions (deliberate)
 
@@ -78,6 +84,6 @@ SQLite (`core/store.py`): one connection per thread, WAL mode and a busy timeout
 |---|---|---|
 | Postgres + Qdrant + Redis + MinIO | SQLite (FTS5 + vectors as blobs), in-process cache, local files | corpus > ~100k chunks or multi-user (Phase 2) |
 | Claude + separate judge | Ollama `qwen3:1.7b`; lexical judge by default, `HIL_JUDGE_MODEL` for an LLM judge | a stronger local or hosted model is available |
-| bge-m3 + bge-reranker | keyword retrieval + lexical reranker (dense optional via Ollama) | GPU available |
+| bge-m3 + bge-reranker | keyword retrieval + lexical reranker; dense (`all-minilm` via Ollama) built as index v2, kept only if it beats keyword-only on the dev set | GPU available |
 | LLM multi-query rewrite | statute-alias + lay-to-legal rewrite | eval shows vocabulary misses |
 | OCR fallback | not needed so far: every e-SCR PDF has a text layer; unreadable files would be dead-lettered | scanned judgments enter the corpus |
