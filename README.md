@@ -201,9 +201,9 @@ Reproduce: `uv run python eval/run_scenarios.py [--heldout]`, `eval/run_ablation
 
 | Phase | Goal | Status |
 |---|---|---|
-| **1. Build it for real** | Full pipeline, grounded answers, adaptive style, API + UI + **MCP**. **No auth** (single-user, localhost) | ✅ Complete ([report](eval/reports/phase1.md)) |
-| **2. Production-ready** | Auth (OAuth 2.1), scale, observability, automated data refresh, compliance, deployment | ⏳ Planned |
-| **3. Intensive testing** | Red-team, hallucination campaign, expert review, MCP conformance, load/chaos, pen-test | ⏳ Planned |
+| **1. Build it for real** | Full pipeline, grounded answers, adaptive style, API + UI + **MCP**. **No auth** (single-user, localhost) | ✅ Complete ([report](eval/reports/phase1.md), [what remains](checklist.md#what-remains-in-phase-1)) |
+| **2. Production-ready** | Auth (OAuth 2.1), scale, observability, automated data refresh, compliance, deployment | ⏳ Planned ([plan](docs/phase2.md)) |
+| **3. Intensive testing** | Red-team, hallucination campaign, expert review, MCP conformance, load/chaos, pen-test | ⏳ Planned ([plan](docs/phase3.md)) |
 
 Phase 1 checklist:
 

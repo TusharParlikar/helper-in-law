@@ -106,11 +106,19 @@ Tracks every Phase 1 item in [`docs/ROADMAP.md`](docs/ROADMAP.md) (§6 milestone
 
 Recall@10 and MRR are measured on the retrieval set over the sample corpus. On real scenarios the correct Article is shown for 91% (dev) and 60% (held-out) of situations, and a cited judgment applies it in 94% and 87%; see [`phase1.md`](eval/reports/phase1.md).
 
-## Still open in Phase 1
+## What remains in Phase 1
 
-- [x] Measure dense retrieval against keyword-only on the dev set (measured; not adopted)
-- [x] Parent expansion
-- [x] 50-judgment parser gold set
-- [x] OCR fallback
-- [ ] MCP Inspector and Claude Desktop check: `make inspector` / add the server to Claude Desktop (needs you)
-- [ ] Lawyer review of the scenario labels (needs a lawyer)
+Phase 1 is complete in code. These items stay open; none needs new code except as noted.
+
+| Item | Why it is open | How to close it | Who |
+|---|---|---|---|
+| MCP Inspector run | It downloads and runs code from npm, which was not run here | `make inspector` (needs Node.js), then check tools/list, each tool, resources, prompts and an error path | You |
+| Real-client check (Claude Desktop / Claude Code) | Needs the client's config on your machine | Add `uv run python -m helperinlaw.mcp_server` as a stdio server; ask one question and one Constitution lookup | You |
+| Lawyer review of the scenario labels | The 77 benchmark labels were written by the developer | An advocate or senior law student checks each scenario's governing Article(s) in `eval/datasets/scenarios*.jsonl`; disagreements are fixed and the benchmarks re-run | A lawyer |
+| LLM mode within 10 s | `qwen3:1.7b` on a laptop CPU generates ~9 tokens/s (45-50 s per answer) | Run on a GPU or a stronger local machine; nothing to change in code. Verbatim mode, the default, already meets 10 s | Hardware |
+| Eval questions before retrieval code | Historical: the set was committed 16 minutes after the retrieval module | Cannot be changed; the held-out set (written after tuning, never tuned on) covers the same concern | - |
+| MCP smoke tests in CI | CI is deferred by decision | Phase 2, W6, when you say | You |
+
+Done since the first checklist: dense retrieval measured (not adopted), parent expansion, 50-judgment parser gold set, OCR fallback.
+
+Next: [Phase 2 plan](docs/phase2.md) · [Phase 3 plan](docs/phase3.md).
