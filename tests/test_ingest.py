@@ -33,3 +33,23 @@ def test_ingest_is_idempotent_and_dead_letters_bad_files(tmp_path: Path, store: 
     r1 = ingest_dir(s, sample)
     r2 = ingest_dir(s, sample)
     assert len(r1.ingested) == 8 and len(r2.skipped) == 8 and not r2.ingested
+
+
+def test_scanned_page_is_ocred(tmp_path: Path) -> None:
+    import pytest
+
+    fitz = pytest.importorskip("fitz")
+    from helperinlaw.ingest.extract import extract_text, tessdata
+
+    if not tessdata():
+        pytest.skip("Tesseract not installed")
+    # Render a text page to an image and build a PDF from the image alone: no text layer.
+    src = fitz.open()
+    src.new_page().insert_text((72, 100), "The appeal is allowed and the detention is quashed.", fontsize=16)
+    pix = src[0].get_pixmap(dpi=200)
+    scan = fitz.open()
+    scan.new_page().insert_image(scan[0].rect, pixmap=pix)
+    path = tmp_path / "scan.pdf"
+    scan.save(path)
+    assert fitz.open(path)[0].get_text().strip() == ""
+    assert "detention is quashed" in extract_text(path)
