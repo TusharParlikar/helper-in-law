@@ -38,4 +38,4 @@ inspector:
 	npx @modelcontextprotocol/inspector uv run python -m helperinlaw.mcp_server
 
 ui:
-	uv run streamlit run ui/app.py
+	uv run streamlit run ui/app.py --server.address 127.0.0.1

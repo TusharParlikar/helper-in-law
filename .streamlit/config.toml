@@ -7,7 +7,7 @@ textColor = "#1C1F23"
 font = "sans serif"
 
 [server]
-address = "127.0.0.1"
+# Local runs bind to 127.0.0.1 via the command line (Makefile, README); a host sets its own address.
 headless = true
 
 [browser]
