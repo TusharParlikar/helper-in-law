@@ -25,7 +25,8 @@ situation / question
   -> retrieve/rerank         IDF-weighted coverage of the situation's most informative words,
                              synonym groups, statute match, profile boosts
   -> ground/pipeline         judgments (max 2 passages each) vote for the Articles they apply;
-                             evidence gate
+                             evidence gate; parent expansion (each judgment passage + its
+                             neighbouring paragraphs)
   -> ground/claim_extract    the governing Article's best clause + verbatim judgment sentences
                              (or, with the LLM on, structured claims citing sources by id)
   -> ground/verify           quote exists (exact, then word-aligned fuzzy), numbers/sections in the
@@ -77,6 +78,9 @@ SQLite (`core/store.py`): one connection per thread, WAL mode and a busy timeout
 | IDF table built once, at API start, under a lock | Local load test, 8 concurrent | Fresh-server p95 106 s -> 8.8 s |
 | Embeddings: `all-minilm`, not `nomic-embed-text` | Embedding speed on the same CPU | ~0.2 s vs ~3 s per passage: ~35 min vs ~7 h for 8,814 passages |
 | Dense search: cached unit vectors, stdlib dot products | 8,814 x 384 vectors | ~0.1 s per query, one query embedding shared by both searches; no numpy dependency |
+| Dense retrieval off by default | 47-scenario benchmark, BM25 vs BM25 + `all-minilm` (RRF) | 37 vs 36 first Article, 42 vs 41 shown, 1.4 s vs 3.4 s; dense for judgments only: 35. Not adopted |
+| Parent expansion, one paragraph each side | same | Precedent applies the Article 39 -> 44/47 (held-out 19 -> 26/30); two paragraphs: no further gain, slower |
+| Paragraph starts tolerate a stray bullet / margin letter, and mid-line starts after a sentence end (not after "Art.", "Sec." ...) | 50-judgment gold set | Paragraph count 48/50 -> 50/50; 95 of 384 judgments re-parsed |
 
 ## Phase 1 substitutions (deliberate)
 
@@ -84,6 +88,6 @@ SQLite (`core/store.py`): one connection per thread, WAL mode and a busy timeout
 |---|---|---|
 | Postgres + Qdrant + Redis + MinIO | SQLite (FTS5 + vectors as blobs), in-process cache, local files | corpus > ~100k chunks or multi-user (Phase 2) |
 | Claude + separate judge | Ollama `qwen3:1.7b`; lexical judge by default, `HIL_JUDGE_MODEL` for an LLM judge | a stronger local or hosted model is available |
-| bge-m3 + bge-reranker | keyword retrieval + lexical reranker; dense (`all-minilm` via Ollama) built as index v2, kept only if it beats keyword-only on the dev set | GPU available |
+| bge-m3 + bge-reranker | keyword retrieval + lexical reranker; dense (`all-minilm` via Ollama) measured and not adopted | GPU available |
 | LLM multi-query rewrite | statute-alias + lay-to-legal rewrite | eval shows vocabulary misses |
-| OCR fallback | not needed so far: every e-SCR PDF has a text layer; unreadable files would be dead-lettered | scanned judgments enter the corpus |
+| OCR fallback (Tesseract via PyMuPDF) | built and tested; no judgment in the current corpus needed it | - |

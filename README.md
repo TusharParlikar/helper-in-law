@@ -136,59 +136,64 @@ REST, MCP and the UI all call one function layer (`service.py`). No business log
 
 ## Results
 
-Measured on the live corpus: the **Constitution of India** (461 articles, official text as on 1 May 2024) and **384 Supreme Court judgments** (2014-2024, 8,814 indexed passages). Two benchmarks of lawyer-style scenarios, each labelled with the Article(s) that govern it, plus 8 out-of-scope questions. Default mode: verbatim passages, keyword search, no LLM. Full write-up: [`eval/reports/phase1.md`](eval/reports/phase1.md).
+Measured on the live corpus: the **Constitution of India** (461 articles, official text as on 1 May 2024) and **384 Supreme Court judgments** (2014-2024, 8,936 indexed passages). Two benchmarks of lawyer-style scenarios, each labelled with the Article(s) that govern it, plus 8 out-of-scope questions. Default mode: verbatim passages, keyword search, no LLM. Full write-up: [`eval/reports/phase1.md`](eval/reports/phase1.md); item-by-item status: [`checklist.md`](checklist.md).
 
 **Finding the law**
 
-| Measure | Dev set (47, tuned on) | Held-out set (30, run once) |
+| Measure | Dev set (47, tuned on) | Held-out set (30, never tuned on) |
 |---|---|---|
-| Correct Article shown for the situation | **89%** (42/47) | **53%** (16/30) |
-| Correct Article is the first one shown | **79%** (37/47) | **47%** (14/30) |
-| Articles shown that are on point (precision) | **63%** (42/67) | **44%** (16/36) |
-| A cited Supreme Court judgment applies that Article | **83%** (39/47) | **63%** (19/30) |
+| Correct Article shown for the situation | **91%** (43/47) | **60%** (18/30) |
+| Correct Article is the first one shown | **77%** (36/47) | **50%** (15/30) |
+| Articles shown that are on point (precision) | **63%** (43/68) | **51%** (19/37) |
+| A cited Supreme Court judgment applies that Article | **94%** (44/47) | **87%** (26/30) |
 | Out-of-scope questions refused ("not found", no guessing) | **100%** (8/8) | **100%** (8/8) |
-| Median / 95th-percentile answer time | 1.4 s / 2.0 s | 1.1 s / 2.2 s |
+| Median / 95th-percentile answer time | 1.9 s / 2.5 s | 1.5 s / 3.0 s |
 
-The held-out set was written after tuning and run exactly once. The gap is the honest measure of how much the lay-to-legal vocabulary was fitted to the dev set: on new wording the system finds the right Article about half the time. It still never shows an unsupported statement. Every miss is listed in [`eval/reports/scenarios.md`](eval/reports/scenarios.md) and [`eval/reports/scenarios_heldout.md`](eval/reports/scenarios_heldout.md).
+Every change was chosen on the dev set; the held-out set only measures. Its first run, before parent expansion and the parser fixes, scored 53% / 47% / 44% / 63% on the four rows above. The remaining dev-to-held-out gap is how much the lay-to-legal vocabulary is fitted to the dev wording. It still never shows an unsupported statement. Every miss is listed in [`eval/reports/scenarios.md`](eval/reports/scenarios.md) and [`eval/reports/scenarios_heldout.md`](eval/reports/scenarios_heldout.md).
 
 **Grounding: what is shown is what the record says**
 
 | Measure | Result |
 |---|---|
-| Unsupported statements displayed | **0** (dev and held-out, 382 quoted passages across 77 answers) |
-| Quotes found verbatim at the cited paragraph | **100%** (240/240 dev, 142/142 held-out), checked independently against the stored text |
+| Unsupported statements displayed | **0** (dev and held-out, 463 quoted passages across 77 answers) |
+| Quotes found verbatim at the cited paragraph | **100%** (284/284 dev, 179/179 held-out), checked independently against the stored text |
 | Answers without citations | **0** |
 | Fault injection: corrupted claims the verifier blocks | **100%** across 10 corruption types (fake case names, altered numbers, flipped meaning, removed negations, fabricated quotes...) |
 | Phase 1 gates (retrieval, abstain, false premise, prompt injection, style invariance) | **11/11 pass** ([`eval/reports/latest.md`](eval/reports/latest.md)) |
 
 **What each part contributes** ([`eval/reports/ablation.md`](eval/reports/ablation.md), dev set, one component off at a time)
 
-| Switched off | First Article correct | Precision |
-|---|---|---|
-| Nothing (full system) | 37/47 | 63% |
-| Precedent vote (judgments voting for the Articles they apply) | 18/47 | 30% |
-| Lay-to-legal vocabulary | 20/47 | 45% |
-| IDF weighting in the reranker | 32/47 | 55% |
-| Runner-up rule (always show 2 Articles) | 37/47 | 45% |
-| Legal-vocabulary gate | 37/47 | 63%, but only 5/8 out-of-scope refused |
+| Switched off | First Article correct | Precision | Precedent applies it |
+|---|---|---|---|
+| Nothing (full system) | 36/47 | 63% | 44/47 |
+| Precedent vote (judgments voting for the Articles they apply) | 18/47 | 30% | 44/47 |
+| Lay-to-legal vocabulary | 20/47 | 43% | 38/47 |
+| IDF weighting in the reranker | 32/47 | 55% | 44/47 |
+| Runner-up rule (always show 2 Articles) | 36/47 | 46% | 44/47 |
+| Parent expansion (matched paragraphs only) | 36/47 | 63% | 39/47 |
+| Legal-vocabulary gate | 36/47 | 63%, but only 5/8 out-of-scope refused | 44/47 |
+
+Dense retrieval (`all-minilm` embeddings fused with BM25) was also measured and not adopted: 36 vs 37 first Article, twice the answer time.
 
 **Engineering checks**
 
 | Check | Result |
 |---|---|
-| Parser audit, 384 judgments ([`eval/reports/parse_audit.md`](eval/reports/parse_audit.md)) | 99% complete metadata, 100% paragraphs numbered 1..N, 3 headnote leaks, median 99% of text captured |
-| Local load test, 120 requests, 8 concurrent | 0 errors; warm 4.2 req/s, p95 2.3 s; cold start p95 8.8 s |
-| MCP server | Verified end to end over stdio and Streamable HTTP with the official MCP Python client (`tests/test_mcp_protocol.py`) |
-| Test suite | 82 passing |
+| Parser gold set, 50 judgments checked against their PDFs ([`eval/reports/parse_audit.md`](eval/reports/parse_audit.md)) | 100% citation, neutral citation, date, bench and paragraph count |
+| Parser audit, all 384 judgments | 99% complete metadata, 100% paragraphs numbered 1..N, 3 headnote leaks, median 99% of text captured |
+| OCR | Pages without a text layer are OCRed with Tesseract; tested on a real image-only PDF |
+| Local load test, 120 requests, 8 concurrent, fresh server | 0 errors; p50 1.8 s, p95 9.5 s (8 uncached questions share one CPU-bound process); one user at a time: ~2 s |
+| MCP server | Verified end to end over stdio and Streamable HTTP with the official MCP Python client (`tests/test_mcp_protocol.py`); `make inspector` opens the MCP Inspector |
+| Test suite | 89 passing |
 
 **Read these numbers honestly**
 
 - The scenario labels are standard constitutional law written by the developer and **have not yet been reviewed by a lawyer**.
 - The samples are small (47 + 30). With 0 unsupported statements in 77 answers, the 95% upper bound on the true rate is about 4%.
-- With the LLM on (Ollama `qwen3:1.7b`, CPU only) an answer takes about 45-50 s once the model is loaded. The prompt now carries only the three best-matching sentences per source (2,050 -> 1,277 tokens), but generation runs at about 9 tokens/s on a laptop CPU, so the 10-second target needs a GPU or a hosted model. Verbatim mode, the default everywhere, meets it.
+- With the LLM on (Ollama `qwen3:1.7b`, CPU only) an answer takes about 45-50 s once the model is loaded. The prompt carries only the three best-matching sentences per source (2,050 -> 1,277 tokens), but generation runs at about 9 tokens/s on a laptop CPU, so the 10-second target needs a GPU or a hosted model. Verbatim mode, the default everywhere, meets it.
 - 384 judgments is a small corpus; a scenario whose leading precedent is not in it can still get the right Article but weaker case support.
 
-Reproduce: `uv run python eval/run_scenarios.py [--heldout]`, `eval/run_ablation.py`, `eval/run_parse_audit.py`, and `eval/load_test.py` against a local API. Building them found and fixed real bugs: report citations such as "[1993] 2 SCR 581" being misread as paragraph numbers, a slow quote matcher, off-topic questions matching common words, HTTP 500s from a shared SQLite connection under concurrent requests, and a 106-second cold start from every first request rebuilding the same index statistics.
+Reproduce: `uv run python eval/run_scenarios.py [--heldout]`, `eval/run_ablation.py`, `eval/run_parse_audit.py`, and `eval/load_test.py` against a local API. Building them found and fixed real bugs: report citations such as "[1993] 2 SCR 581" being misread as paragraph numbers, a slow quote matcher, off-topic questions matching common words, paragraphs merged when a scan put a bullet or margin letter before the number, HTTP 500s from a shared SQLite connection under concurrent requests, and a 106-second cold start from every first request rebuilding the same index statistics.
 
 ---
 

@@ -14,7 +14,7 @@ Tracks every Phase 1 item in [`docs/ROADMAP.md`](docs/ROADMAP.md) (§6 milestone
 
 - [x] Downloaders for the official Constitution PDF and the Supreme Court open dataset: resumable, idempotent, cached by file
 - [x] Extraction with a quality score
-- [ ] OCR fallback: not built; every PDF in the corpus has a text layer, and unreadable ones go to the dead-letter table
+- [x] OCR fallback: pages without a text layer are OCRed with Tesseract (via PyMuPDF); without Tesseract they fall through to the quality gate and the dead-letter table (`tests/test_ingest.py::test_scanned_page_is_ocred`)
 - [x] Cleaner (headers, footers, hyphenation, banners, footnotes)
 - [x] Dead-letter table + failure reasons
 - [x] **Exit:** 100% of the target corpus processed or logged as failed
@@ -26,12 +26,12 @@ Tracks every Phase 1 item in [`docs/ROADMAP.md`](docs/ROADMAP.md) (§6 milestone
 - [x] Section labels (facts / issues / arguments / reasoning / holding)
 - [x] Statute extraction + IPC↔BNS, CrPC↔BNSS, Evidence↔BSA aliases
 - [x] Case→case citation extraction with treatment (SCR / INSC / reporter citations resolved)
-- [ ] **Exit:** 50-judgment hand-labelled gold set: not built. Automated audit on 384 real judgments instead ([`parse_audit.md`](eval/reports/parse_audit.md)): 99% metadata, 100% paragraph numbering
+- [x] **Exit:** 50-judgment gold set (`eval/datasets/gold_parse_real.jsonl`), labels from each judgment's PDF, disagreements reviewed by hand: 100% citation, neutral citation, date, bench, paragraph count ([`parse_audit.md`](eval/reports/parse_audit.md)). Building it found and fixed two paragraph bugs and a metadata gap
 
 ## M4 Indexing
 
 - [x] Structure-aware chunker (~300 words, paragraph-bounded, context prefix; size chosen by measurement)
-- [x] Embeddings, versioned and resumable: index v2, 8,814 passages, `all-minilm` via Ollama (CPU, no GPU; bge-m3 not used)
+- [x] Embeddings, versioned and resumable (`all-minilm` via Ollama; CPU, no GPU, so not bge-m3). Measured against keyword-only on the dev set: not better for Articles (36 vs 37 first Article), so served off by default
 - [x] Vector store: SQLite blobs with cached in-memory search (in place of Qdrant)
 - [x] Side-by-side `index_version` rebuild command + [reindex runbook](docs/runbooks/reindex.md)
 
@@ -41,7 +41,7 @@ Tracks every Phase 1 item in [`docs/ROADMAP.md`](docs/ROADMAP.md) (§6 milestone
 - [x] Query rewrite: statute aliases + lay-to-legal vocabulary (rule-based, not LLM multi-query)
 - [x] Hybrid + RRF (BM25 + dense)
 - [x] Rerank: lexical, IDF-weighted (cross-encoder needs a GPU)
-- [ ] Parent expansion: not built
+- [x] Parent expansion: each judgment passage gets its neighbouring paragraphs (precedent support 39 -> 44/47 dev, 19 -> 26/30 held-out)
 - [x] Authority / recency boosts (profile-aware)
 - [x] Evidence gate tuned on the unanswerable and out-of-scope sets (100% refused)
 - [x] **Eval gate:** Recall@10 ≥ 0.85 (1.0 on the retrieval set)
@@ -78,12 +78,12 @@ Tracks every Phase 1 item in [`docs/ROADMAP.md`](docs/ROADMAP.md) (§6 milestone
 - [x] Resources: `judgment://{case_id}`, `statute://{act}/{section}`
 - [x] Prompts: research memo, find contrary authority
 - [x] Safety rules: verified response objects only, citations in every claim, size caps, source text labelled as quoted, clear descriptions
-- [ ] Verified with MCP Inspector and a real client: verified with the official MCP Python client over stdio and Streamable HTTP (`tests/test_mcp_protocol.py`); Inspector and Claude Desktop not run
+- [ ] Verified with MCP Inspector and a real client: verified with the official MCP Python client over stdio and Streamable HTTP (`tests/test_mcp_protocol.py`). Inspector: run `make inspector` (needs Node.js; not run here because it downloads and executes npm code)
 - [ ] MCP smoke tests in CI: CI deferred by decision (the tests run locally)
 
 ## M10 Hardening
 
-- [x] Unit / integration tests (83), parser golden tests, verification fault-injection tests (10 corruption types, 100% caught)
+- [x] Unit / integration tests (89), parser golden tests, verification fault-injection tests (10 corruption types, 100% caught)
 - [x] Baseline load test (local): 0 errors, warm p95 2.3 s, fresh-server p95 8.8 s
 - [x] README, architecture doc, reindex runbook
 - [x] Phase 1 evaluation report with ablation table ([`phase1.md`](eval/reports/phase1.md), [`ablation.md`](eval/reports/ablation.md))
@@ -95,21 +95,22 @@ Tracks every Phase 1 item in [`docs/ROADMAP.md`](docs/ROADMAP.md) (§6 milestone
 | Recall@10 (retrieval set) | ≥ 0.85 | 1.0 | [x] |
 | MRR | ≥ 0.60 | 0.983 | [x] |
 | Unsupported claims displayed | 0 | 0 (sample gates, 47 dev, 30 held-out) | [x] |
-| Citation accuracy | ≥ 0.99 | 1.0 (240/240 dev, 142/142 held-out) | [x] |
+| Citation accuracy | ≥ 0.99 | 1.0 (284/284 dev, 179/179 held-out) | [x] |
 | Responses lacking citations | 0 | 0 | [x] |
 | Abstain correctness on unanswerables | ≥ 0.90 | 1.0 (and 8/8 out-of-scope) | [x] |
 | Prompt-injection pass rate | 100% | 100% | [x] |
 | Style invariance | 100% | 100% | [x] |
 | MCP tools pass Inspector + real-client check | all | official Python client only | [ ] |
 | p95 `/ask` latency | ≤ 10 s | 2.3 s warm, 8.8 s fresh (verbatim default); 45-50 s with the LLM on | [x] |
-| Parser accuracy | ≥ 0.95 | 1.0 on the gold set; 99-100% automated audit on 384 real judgments | [x] |
+| Parser accuracy | ≥ 0.95 | 100% on the 50-judgment real gold set and the sample gold set; 99-100% automated audit on 384 judgments | [x] |
 
-Recall@10 and MRR are measured on the retrieval set over the sample corpus. On real scenarios the correct Article is shown for 89% (dev) and 53% (held-out) of situations; see [`phase1.md`](eval/reports/phase1.md).
+Recall@10 and MRR are measured on the retrieval set over the sample corpus. On real scenarios the correct Article is shown for 91% (dev) and 60% (held-out) of situations, and a cited judgment applies it in 94% and 87%; see [`phase1.md`](eval/reports/phase1.md).
 
 ## Still open in Phase 1
 
-- [ ] Measure dense retrieval (index v2, embeddings built) against keyword-only on the dev set; keep it only if it helps
-- [ ] Parent expansion
-- [ ] 50-judgment hand-labelled parser gold set
-- [ ] MCP Inspector and Claude Desktop check
-- [ ] Lawyer review of the scenario labels
+- [x] Measure dense retrieval against keyword-only on the dev set (measured; not adopted)
+- [x] Parent expansion
+- [x] 50-judgment parser gold set
+- [x] OCR fallback
+- [ ] MCP Inspector and Claude Desktop check: `make inspector` / add the server to Claude Desktop (needs you)
+- [ ] Lawyer review of the scenario labels (needs a lawyer)
