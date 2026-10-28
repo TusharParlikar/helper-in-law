@@ -138,3 +138,10 @@ def test_older_layout_headnote_is_not_the_judgment() -> None:
     paras = judgment_paragraphs(text)
     assert [n for n, _ in paras] == [1, 2, 3]
     assert paras[0][1] == "The past decade has seen change."
+
+
+def test_neutral_citation_from_the_pdf_first_page() -> None:
+    from helperinlaw.ingest.sci import pdf_neutral
+
+    assert pdf_neutral("[2024] 12 S.C.R. 843 : 2024 INSC 985\nMunicipal Corporation") == "2024 INSC 985"
+    assert pdf_neutral("[2014] 3 S.C.R. 693\nSUDIPTA LENKA") == ""

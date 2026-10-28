@@ -50,6 +50,15 @@ def judgment_start(text: str) -> int:
     return after
 
 
+NEUTRAL = re.compile(r"\b(\d{4})\s*INSC\s*(\d+)")
+
+
+def pdf_neutral(text: str) -> str:
+    """The neutral citation printed on the first page, for records whose metadata lacks it."""
+    m = NEUTRAL.search(text[:2000])
+    return f"{m.group(1)} INSC {m.group(2)}" if m else ""
+
+
 AUTHOR_LINE = re.compile(r"^\s*[A-Z][A-Za-z.\s]{2,60},\s*(?:CJI|J)\.?\s*:?\s*$", re.M)
 NUMBERED = re.compile(r"^\s*(\d{1,4})\.\s", re.M)
 
@@ -163,7 +172,7 @@ def ingest_judgment(store: Store, meta: Meta) -> str:
         raise ValueError("no numbered judgment paragraphs")
     case = Case(id=case_id, title=meta.title, court="Supreme Court of India", date=meta.date,
                 bench=meta.coram, case_no=meta.case_no, citation=meta.citation,
-                neutral_citation=meta.neutral, url=meta.pdf_url, pdf_sha256=sha256(pdf))
+                neutral_citation=meta.neutral or pdf_neutral(raw), url=meta.pdf_url, pdf_sha256=sha256(pdf))
     store.add_case(case, [Paragraph(case_id=case_id, n=n, text=t, section=label(t, n)) for n, t in paras])
     store.add_statutes(case_id, extract_statutes(" ".join(t for _, t in paras)))
     return "ingested"
@@ -179,8 +188,12 @@ def reparse(store: Store) -> dict[str, int]:
         pdf = RAW / f"{Path(case.url).stem.removesuffix('_EN')}.pdf"
         if not pdf.exists():
             continue
-        paras = judgment_paragraphs(clean(extract_text(pdf)))
+        raw = extract_text(pdf)
+        paras = judgment_paragraphs(clean(raw))
         old = [(p.n, p.text) for p in store.get_paragraphs(case.id)]
+        if not case.neutral_citation and (nc := pdf_neutral(raw)):
+            case = case.model_copy(update={"neutral_citation": nc})
+            old = []  # store the corrected metadata
         if len(paras) < 3 or paras == old:
             unchanged += 1
             continue
