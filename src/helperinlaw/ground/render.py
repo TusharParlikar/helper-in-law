@@ -18,7 +18,15 @@ def source_of(case_id: str) -> str:
 
 
 def case_url(base: str, case_id: str, para: int | str | None = None) -> str:
+    if not base:  # no API: links open the Streamlit app's own reader
+        return f"?case={quote(case_id)}" + (f"&para={para}" if para else "")
     return f"{base}/cases/{case_id}/view" + (f"#para-{para}" if para else "")
+
+
+def statute_url(base: str, act: str, section: str | int) -> str:
+    if not base:
+        return f"?statute={quote(act)}&section={quote(str(section))}"
+    return f"{base}/statutes/{act}/{section}/view"
 
 
 def law_ref(act: str, section: str, base: str, store: Store | None = None) -> LawRef:
@@ -30,7 +38,7 @@ def law_ref(act: str, section: str, base: str, store: Store | None = None) -> La
         paras = store.get_paragraphs(article.id) if store else []
         return LawRef(
             act=act, section=section, label=f"Article {section}, Constitution of India",
-            url=f"{base}/statutes/{act}/{section}/view", official_url=article.url,
+            url=statute_url(base, act, section), official_url=article.url,
             text=paras[0].text if paras else "", source=COI_EDITION,
         )
     return LawRef(
@@ -38,7 +46,7 @@ def law_ref(act: str, section: str, base: str, store: Store | None = None) -> La
         section=section,
         label=f"{unit} {section}, {name}",
         equivalents=[f"{a} {s}" for a, s in aliases(act, section)[1:]],
-        url=f"{base}/statutes/{act}/{section}/view",
+        url=statute_url(base, act, section),
         official_url=f"https://www.google.com/search?q={search}",
     )
 

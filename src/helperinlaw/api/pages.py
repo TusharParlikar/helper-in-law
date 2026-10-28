@@ -5,6 +5,7 @@ import re
 from html import escape
 from typing import Any
 
+from helperinlaw.ground.render import statute_url
 from helperinlaw.parse.statutes import _NAME_TO_ACT, ARTICLE, SECTION
 
 STYLE = """
@@ -53,10 +54,10 @@ def link_laws(text: str, base: str) -> str:
 
     def section(m: re.Match[str]) -> str:
         act = _NAME_TO_ACT.get(m.group("act").lower(), "")
-        return f"<a class='law' href='{base}/statutes/{act}/{m.group('s')}/view'>{m.group(0)}</a>"
+        return f"<a class='law' href='{statute_url(base, act, m.group('s'))}'>{m.group(0)}</a>"
 
     def article(m: re.Match[str]) -> str:
-        return f"<a class='law' href='{base}/statutes/CONST/{m.group('s')}/view'>{m.group(0)}</a>"
+        return f"<a class='law' href='{statute_url(base, 'CONST', m.group('s'))}'>{m.group(0)}</a>"
 
     return ARTICLE.sub(article, SECTION.sub(section, out))
 
