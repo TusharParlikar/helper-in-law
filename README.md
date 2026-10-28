@@ -251,7 +251,7 @@ uv run python -m helperinlaw.index build
 
 # 6. Run
 uv run python -m helperinlaw.api        # REST API on 127.0.0.1:8000
-uv run streamlit run ui/app.py          # Web UI
+uv run streamlit run ui/app.py --server.address 127.0.0.1  # Web UI
 uv run python -m helperinlaw.mcp_server # MCP (stdio)
 ```
 
@@ -264,6 +264,8 @@ Without Ollama the system still works: retrieval falls back to BM25 and answers 
 ### Web UI
 
 Open the Streamlit URL, ask a question, and click any citation to see the highlighted paragraph in the source judgment.
+
+**Hosted demo for clients:** deploy the same UI on Streamlit Community Cloud, private to invited emails, with the corpus shipped in the repo. Steps: [`docs/deploy-streamlit.md`](docs/deploy-streamlit.md).
 
 ### REST API
 
