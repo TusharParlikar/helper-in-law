@@ -29,7 +29,7 @@ def unit(v: list[float]) -> list[float]:
 
 
 def cosine(a: list[float], b: list[float]) -> float:
-    return sum(map(mul, unit(a), unit(b)))
+    return float(sum(map(mul, unit(a), unit(b))))
 
 
 _VECS: dict[tuple[int, str, int], list[tuple[str, list[float]]]] = {}

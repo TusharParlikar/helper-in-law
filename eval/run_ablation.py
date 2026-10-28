@@ -49,6 +49,7 @@ CONFIGS = [
     ("- IDF weighting in reranker", [(rerank, "idf_table", no_idf)]),
     ("- runner-up rule (always 2 Articles)", [(claim_extract, "RUNNER_UP", 0.0)]),
     ("- legal-vocabulary gate", [(gate, "legal_question", lambda q: True)]),
+    ("- parent expansion (matched paragraphs only)", [(pipeline, "PARENT_WINDOW", 0)]),
 ]
 
 
