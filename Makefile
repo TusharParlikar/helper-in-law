@@ -1,4 +1,4 @@
-.PHONY: install lint format type test eval eval-llm ingest index api mcp ui
+.PHONY: install lint format type test eval eval-llm ingest index api mcp inspector ui
 
 install:
 	uv sync --extra pdf --extra ui
@@ -32,6 +32,10 @@ api:
 
 mcp:
 	uv run python -m helperinlaw.mcp_server
+
+# Official MCP Inspector (Node.js): opens a browser UI connected to the stdio server.
+inspector:
+	npx @modelcontextprotocol/inspector uv run python -m helperinlaw.mcp_server
 
 ui:
 	uv run streamlit run ui/app.py
