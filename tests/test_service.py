@@ -2,6 +2,8 @@ import itertools
 
 import pytest
 
+from helperinlaw.core.store import Store
+from helperinlaw.core.types import Chunk
 from helperinlaw.service import Service
 
 BAIL = "What are the grounds for refusing bail under Section 439 CrPC?"
@@ -137,3 +139,16 @@ def test_concurrent_requests_on_a_file_database(tmp_path, store) -> None:  # typ
     for t in threads:
         t.join()
     assert not errors, errors[:1]
+
+
+def test_parent_expansion_adds_neighbouring_paragraphs(store: Store) -> None:
+    from helperinlaw.ground.pipeline import expand
+    from helperinlaw.ground.text import paragraphs_of
+
+    case = next(c for c in store.list_cases() if not c.id.startswith("coi-"))
+    paras = store.get_paragraphs(case.id)
+    mid = paras[len(paras) // 2]
+    chunk = Chunk(id="x", case_id=case.id, para_from=mid.n, para_to=mid.n, text=f"⟦{mid.n}⟧ {mid.text}")
+    out = expand(store, chunk)
+    assert [n for n, _ in paragraphs_of(out.text)] == [mid.n - 1, mid.n, mid.n + 1]
+    assert (out.para_from, out.para_to) == (mid.n - 1, mid.n + 1)

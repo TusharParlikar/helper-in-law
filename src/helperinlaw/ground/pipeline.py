@@ -22,7 +22,7 @@ from helperinlaw.core.types import (
 )
 from helperinlaw.ground.claim_extract import extractive_claims, llm_claims
 from helperinlaw.ground.verify import verify
-from helperinlaw.ingest.official import PREFIX
+from helperinlaw.ingest.official import PREFIX, is_provision
 from helperinlaw.retrieve.evidence_gate import enough_evidence
 from helperinlaw.retrieve.hybrid import search
 from helperinlaw.retrieve.rerank import rerank
@@ -32,6 +32,7 @@ from helperinlaw.retrieve.understand import understand
 log = get_logger(__name__)
 MAX_PROVISIONS, MAX_JUDGMENTS = 4, 6
 PRECEDENT_BOOST = 0.4  # added to a provision cited by every retrieved judgment
+PARENT_WINDOW = 1  # neighbouring paragraphs added to each retrieved judgment passage
 Mode = Literal["synthesised", "extractive"]
 
 
@@ -75,6 +76,20 @@ def retrieve(
     return sources, ok
 
 
+def expand(store: Store, chunk: Chunk) -> Chunk:
+    """Parent expansion: a matched passage plus its neighbouring paragraphs, so the sentence
+    that states the holding is available even when the match was the paragraph before it.
+    Retrieval scores are unchanged; only what claims are drawn from grows."""
+    window = PARENT_WINDOW
+    if not window or is_provision(chunk.case_id):
+        return chunk
+    paras = store.get_paragraphs(chunk.case_id, chunk.para_from - window, chunk.para_to + window)
+    if not paras:
+        return chunk
+    text = "\n".join(f"⟦{p.n}⟧ {p.text}" for p in paras)
+    return chunk.model_copy(update={"para_from": paras[0].n, "para_to": paras[-1].n, "text": text})
+
+
 def abstain(
     question: str,
     sources: list[Source],
@@ -99,6 +114,7 @@ def answer_content(
     if not ok:
         return abstain(question, sources, ["Not found in the indexed judgments."])
     sources = [s for s in sources if s.score >= cfg.evidence_min_score * 0.6] or sources[:3]
+    sources = [s.model_copy(update={"chunk": expand(store, s.chunk)}) for s in sources]
 
     def run(cs: ClaimSet, rejected: int, mode: Mode) -> VerifiedClaimSet:
         claims, report = verify(
