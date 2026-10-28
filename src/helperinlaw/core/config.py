@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     max_drop_ratio: float = 0.5  # above this, fall back to extractive mode (G8)
     fuzzy_quote_ratio: float = 0.97
 
+    demo: bool = False  # shared hosted demo: each browser session gets its own answer style
     bind_host: str = "127.0.0.1"
     public_url: str = "http://127.0.0.1:8000"  # base for judgment and statute links
     corpus_as_of: str = "2024-12-31"

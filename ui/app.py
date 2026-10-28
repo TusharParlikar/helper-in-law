@@ -1,21 +1,86 @@
-"""Streamlit UI: uv run streamlit run ui/app.py  (needs the "ui" extra).
+"""Streamlit UI: uv run streamlit run ui/app.py --server.address 127.0.0.1  (needs the "ui" extra).
 
-Judgment links open the API's reader pages, so keep `python -m helperinlaw.api` running too."""
+Judgment and Article links open the app's own reader (?case=... / ?statute=...), so no API is
+needed. Deployed as a shared demo (Streamlit Community Cloud), set HIL_DEMO=true: see
+docs/deploy-streamlit.md."""
 
+import gzip
+import shutil
+import sys
+import uuid
 from datetime import datetime
 from html import escape
+from pathlib import Path
 
 import streamlit as st
-from art import colonnade, mark
 
-from helperinlaw.core.config import Settings
-from helperinlaw.core.types import Citation, Filters, Response
-from helperinlaw.report import build_report, has_proof
-from helperinlaw.service import Service
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "src"))  # hosted without installing the package
+
+from art import colonnade, mark  # noqa: E402
+
+from helperinlaw.api.pages import judgment_page, statute_page  # noqa: E402
+from helperinlaw.core import ollama  # noqa: E402
+from helperinlaw.core.config import Settings  # noqa: E402
+from helperinlaw.core.types import Citation, Filters, Response  # noqa: E402
+from helperinlaw.ground.render import statute_url  # noqa: E402
+from helperinlaw.report import build_report, has_proof  # noqa: E402
+from helperinlaw.service import Service  # noqa: E402
+
+DEMO_DB = ROOT / "deploy" / "helperinlaw.db.gz"
 
 st.set_page_config(
     page_title="Helper in Law", page_icon="⚖", layout="wide", initial_sidebar_state="collapsed"
 )
+
+
+@st.cache_resource
+def database() -> None:
+    """A fresh deployment has no database: unpack the one shipped in deploy/."""
+    db = Path(Settings().db_path)
+    if not db.exists() and DEMO_DB.exists():
+        db.parent.mkdir(parents=True, exist_ok=True)
+        with gzip.open(DEMO_DB, "rb") as f, db.open("wb") as out:
+            shutil.copyfileobj(f, out)
+
+
+@st.cache_resource
+def service(use_llm: bool) -> Service:
+    database()
+    return Service(cfg=Settings(use_llm=use_llm, public_url=""))  # "": links stay in this app
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def llm_available() -> bool:
+    return ollama.available()
+
+
+def reader() -> None:
+    """Judgment or Article page, opened from a citation link."""
+    qp = st.query_params
+    s = service(False)
+    if "case" in qp:
+        case = s.get_case(qp["case"])
+        paras = [p.model_dump() for p in s.store.get_paragraphs(qp["case"])]
+        html = judgment_page(case, paras, s.find_citing_cases(qp["case"]), "")
+    else:
+        html = statute_page(s.lookup_statute(qp["statute"], qp.get("section", "")))
+    st.markdown("<a href='./' target='_self'>← New search</a>", unsafe_allow_html=True)
+    st.html(html)
+    if para := qp.get("para"):  # scroll to the cited paragraph once the page is drawn
+        st.html(
+            f"<script>setTimeout(() => document.getElementById('para-{int(para)}')"
+            "?.scrollIntoView({block: 'start'}), 300)</script>",
+            unsafe_allow_javascript=True,  # fixed script; the only input is an int
+        )
+
+
+if "case" in st.query_params or "statute" in st.query_params:
+    try:
+        reader()
+    except (KeyError, ValueError):
+        st.error("That judgment or Article is not in the indexed corpus.")
+    st.stop()
 
 st.markdown(
     f"""
@@ -110,11 +175,6 @@ sup a {{ color: var(--navy) !important; text-decoration: none !important; font-w
 )
 
 
-@st.cache_resource
-def service(use_llm: bool) -> Service:
-    return Service(cfg=Settings(use_llm=use_llm))
-
-
 ONBOARD_SAMPLE = "My client was arrested at night and was not told the grounds of arrest or allowed to call a lawyer."
 SCENARIOS = {
     "Arrest without grounds": "My client was arrested at night by the police and kept in custody for two days. "
@@ -128,7 +188,9 @@ SCENARIOS = {
 }
 
 ss = st.session_state
-prof = service(False).get_profile()  # saved answer style: defaults for Settings and onboarding
+# A shared demo gives each browser session its own answer style; locally it is saved as "default".
+pid = ss.setdefault("pid", f"demo-{uuid.uuid4().hex[:12]}" if Settings().demo else "default")
+prof = service(False).get_profile(pid)  # saved answer style: defaults for Settings and onboarding
 DEPTHS = {"quick": "Brief", "standard": "Standard", "deep": "Detailed"}
 FORMATS = {"bullets": "Points", "irac": "IRAC", "memo": "Memo"}
 TONES = {"technical": "Legal", "plain": "Plain"}
@@ -145,7 +207,7 @@ top_l, top_r = st.columns([3, 2], vertical_alignment="center")
 with top_r:
     s1, s2 = st.columns([5, 2], vertical_alignment="center")
     with s2.popover("Settings", use_container_width=True):
-        use_llm = st.toggle(
+        use_llm = llm_available() and st.toggle(  # hidden where no local model runs
             "AI drafting (Ollama)",
             value=False,
             help="Off: verbatim passages, instant. On: the local model drafts the analysis; "
@@ -212,11 +274,11 @@ def onboarding() -> None:
     )
     b1, b2 = st.columns(2)
     if b1.button("Save as my default", type="primary", use_container_width=True):
-        svc.update_profile("default", style)
+        svc.update_profile(pid, style)
         ss.onboarded = True
         st.rerun()
     if b2.button("Skip", use_container_width=True):
-        svc.update_profile("default", {})  # remember that onboarding was seen
+        svc.update_profile(pid, {})  # remember that onboarding was seen
         ss.onboarded = True
         st.rerun()
 
@@ -260,7 +322,7 @@ def provision_card(cs: list[Citation], refs: dict[str, int]) -> str:
         f"<div class='card prov'><h4>{escape(c.case_title)}</h4>"
         f"<div class='meta'>{escape(c.neutral_citation)}</div>{quotes(cs, refs)}"
         f"<div class='links'>{link('Official text, exact page ↗', c.url)}"
-        f"{link('Judgments applying it ↗', f'{svc.cfg.public_url}/statutes/CONST/{art}/view')}</div>"
+        f"{link('Judgments applying it ↗', statute_url(svc.cfg.public_url, 'CONST', art))}</div>"
         f"<div class='meta' style='margin-top:8px'>Source: {escape(c.source)}</div></div>"
     )
 
@@ -385,7 +447,8 @@ with research:
         f1, f2 = st.columns([5, 1], vertical_alignment="center")
         f1.markdown(
             "<div class='meta'><span class='kbd'>Press Ctrl + Enter or click Analyse. </span>"
-            "Facts stay on this machine.</div>",
+            + ("Facts are processed on the demo server and not saved." if Settings().demo
+               else "Facts stay on this machine.") + "</div>",
             unsafe_allow_html=True,
         )
         if f2.form_submit_button("Analyse", use_container_width=True):
@@ -406,7 +469,7 @@ with research:
             year_to=years[1] if years[1] < 2025 else None,
         )
         with st.spinner("Reading the Constitution and the judgments…"):
-            resp = svc.ask(ss.q, filters, style)
+            resp = svc.ask(ss.q, filters, style, pid)
         render(resp)
 
 with lookup:
