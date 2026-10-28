@@ -75,3 +75,29 @@ def test_real_report_citations_are_normalised() -> None:
     assert got["[2018] 13 S.C.R. 1286"] == ("followed", 4)
     assert got["2021 INSC 295"] == ("followed", 4)
     assert got["[2017] 10 S.C.R. 569"] == ("overruled", 9)
+
+
+def test_paragraph_number_after_stray_bullet_or_margin_letter() -> None:
+    from helperinlaw.parse.paragraphs import split_paragraphs
+
+    text = "1. First.\n· 2. Second, after a bullet.\nE 3. Third, after a margin letter.\nA 2. not a new paragraph."
+    _, paras = split_paragraphs(text)
+    assert [n for n, _ in paras] == [1, 2, 3]
+
+
+def test_paragraph_joined_onto_previous_line() -> None:
+    from helperinlaw.parse.paragraphs import split_paragraphs
+
+    text = '1. First.\n2. It "must be kept in mind." . 3. Considering the facts, see para 2. 4. not yet.\nI 4. Fourth.'
+    _, paras = split_paragraphs(text)
+    assert [n for n, _ in paras] == [1, 2, 3, 4]
+    assert paras[2][1].startswith("Considering") and paras[3][1] == "Fourth."
+
+
+def test_article_reference_is_not_a_paragraph_start() -> None:
+    from helperinlaw.parse.paragraphs import split_paragraphs
+
+    text = "1. First.\n2. The scheme of Art. 19 differs from Art. 3. Provisos deal with it.\n3. Third ends \"quoted\".\n4. Fourth."
+    _, paras = split_paragraphs(text)
+    assert [n for n, _ in paras] == [1, 2, 3, 4]
+    assert paras[1][1].endswith("Provisos deal with it.") and paras[2][1].endswith('"quoted".')
