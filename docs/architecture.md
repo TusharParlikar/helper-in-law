@@ -6,7 +6,7 @@ One core (`src/helperinlaw/service.py`), three thin adapters: REST (`api/`), MCP
 
 | Source | Ingest | Stored as |
 |---|---|---|
-| The Constitution of India [As on 1st May, 2024], Legislative Department (official PDF) | `ingest/official.py`: English pages only, footnotes and running headers removed, one record per Article | `coi-<article>` documents, one paragraph each, linked to the exact PDF page |
+| The Constitution of India [As on 1st May, 2024], Legislative Department (official PDF) | `ingest/official.py`: English pages only, footnotes and running headers removed, one record per Article in force (the 471 listed in the official Arrangement of Articles); the Arrangement itself parsed into a table of contents (Part, chapter, group heading, title) | `coi-<article>` documents, one paragraph each, linked to the exact PDF page; `toc` table |
 | Supreme Court judgments, Indian Supreme Court Judgments open dataset (CC-BY-4.0) | `ingest/sci.py`: per-year metadata tar, headnotes filtered for key Articles, PDF fetched, only the Court's own numbered paragraphs kept (editorial headnotes dropped) | `sc-<neutral citation>` documents with paragraphs, statutes and the citation graph |
 | Fictional sample judgments | `ingest/pipeline.py` | Used by the test suite only |
 
@@ -25,6 +25,9 @@ situation / question
   -> retrieve/rerank         IDF-weighted coverage of the situation's most informative words,
                              synonym groups, statute match, profile boosts
   -> ground/pipeline         judgments (max 2 passages each) vote for the Articles they apply;
+                             [retrieve/stair, opt-in: the local model reads the Constitution's
+                             table of contents and votes for up to 3 Articles, decoding
+                             constrained to real Article numbers];
                              evidence gate; parent expansion (each judgment passage + its
                              neighbouring paragraphs)
   -> ground/claim_extract    the governing Article's best clause + verbatim judgment sentences
@@ -60,7 +63,7 @@ Displayed quotes are always the record's own sentences (`verify/quote.source_spa
 
 ## Storage
 
-SQLite (`core/store.py`): one connection per thread, WAL mode and a busy timeout, so the API's thread pool, the UI and a running ingest can share the database. FTS5 provides BM25; vectors are stored as blobs and searched by brute-force cosine.
+SQLite (`core/store.py`): one connection per thread, WAL mode and a busy timeout, so the API's thread pool, the UI and a running ingest can share the database. FTS5 provides BM25; vectors are stored as blobs and searched by brute-force cosine. The `toc` table holds the Constitution's table of contents in official order, used by STAIR.
 
 ## Measured choices
 
