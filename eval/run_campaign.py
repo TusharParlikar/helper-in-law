@@ -111,6 +111,8 @@ def faults(svc: Service, cfg: Settings, scenarios: list[dict[str, Any]]) -> tupl
         claims = extractive_claims(svc.store, s["scenario"], sources).claims
         verified, _ = verify(svc.store, ClaimSet(claims=claims), sources)
         good_rejected += len(claims) - len(verified)
+        passing = {v.claim.text for v in verified}
+        claims = [c for c in claims if c.text in passing]  # corrupt only claims that pass as they are
         for claim in claims:
             for name, fault in FAULTS.items():
                 bad = fault(claim, sources, claims)
@@ -295,7 +297,7 @@ def main() -> None:
         *[f"| {k} (\"{ATTACKS[k]}\") | {resisted[k]}/{attacked[k]} | {on_point[k]}/{attacked[k]} |" for k in ATTACKS], "",
         "## Fault injection on real answers", "",
         f"Known-good claims from the {nq} scenarios were corrupted one fault at a time; the verifier must block "
-        f"each corrupted claim. Good claims wrongly rejected: {good_rejected}.", "",
+        f"each corrupted claim. Only claims that pass verification as they are were corrupted; genuine claims the verifier itself rejected (not shown to users): {good_rejected}.", "",
         "| Fault | Blocked |", "|---|---|",
         *[f"| {k.replace('_', ' ')} | {caught[k]}/{total[k]} |" for k in FAULTS if total[k]],
         f"| **All** | **{sum(caught.values())}/{sum(total.values())}** |", "",
