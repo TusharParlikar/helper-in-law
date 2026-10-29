@@ -136,18 +136,18 @@ REST, MCP and the UI all call one function layer (`service.py`). No business log
 
 ## Results
 
-Measured on the live corpus: the **Constitution of India** (461 articles, official text as on 1 May 2024) and **384 Supreme Court judgments** (2014-2024, 8,936 indexed passages). Two benchmarks of lawyer-style scenarios, each labelled with the Article(s) that govern it, plus 8 out-of-scope questions. Default mode: verbatim passages, keyword search, no LLM. Full write-up: [`eval/reports/phase1.md`](eval/reports/phase1.md); item-by-item status: [`checklist.md`](checklist.md).
+Measured on the live corpus: the **Constitution of India** (all 471 Articles in force, official text as on 1 May 2024, with its official table of contents) and **384 Supreme Court judgments** (2014-2024, 8,946 indexed passages). Two benchmarks of lawyer-style scenarios, each labelled with the Article(s) that govern it, plus 8 out-of-scope questions. Default mode: verbatim passages, keyword search, no LLM. Full write-up: [`eval/reports/phase1.md`](eval/reports/phase1.md); item-by-item status: [`checklist.md`](checklist.md).
 
 **Finding the law**
 
 | Measure | Dev set (47, tuned on) | Held-out set (30, never tuned on) |
 |---|---|---|
-| Correct Article shown for the situation | **91%** (43/47) | **60%** (18/30) |
+| Correct Article shown for the situation | **91%** (43/47) | **57%** (17/30) |
 | Correct Article is the first one shown | **77%** (36/47) | **50%** (15/30) |
-| Articles shown that are on point (precision) | **63%** (43/68) | **51%** (19/37) |
+| Articles shown that are on point (precision) | **63%** (43/68) | **51%** (18/35) |
 | A cited Supreme Court judgment applies that Article | **94%** (44/47) | **87%** (26/30) |
 | Out-of-scope questions refused ("not found", no guessing) | **100%** (8/8) | **100%** (8/8) |
-| Median / 95th-percentile answer time | 1.9 s / 2.5 s | 1.5 s / 3.0 s |
+| Median / 95th-percentile answer time | 0.8 s / 1.1 s | 0.7 s / 1.5 s |
 
 Every change was chosen on the dev set; the held-out set only measures. Its first run, before parent expansion and the parser fixes, scored 53% / 47% / 44% / 63% on the four rows above. The remaining dev-to-held-out gap is how much the lay-to-legal vocabulary is fitted to the dev wording. It still never shows an unsupported statement. Every miss is listed in [`eval/reports/scenarios.md`](eval/reports/scenarios.md) and [`eval/reports/scenarios_heldout.md`](eval/reports/scenarios_heldout.md).
 
@@ -155,8 +155,8 @@ Every change was chosen on the dev set; the held-out set only measures. Its firs
 
 | Measure | Result |
 |---|---|
-| Unsupported statements displayed | **0** (dev and held-out, 463 quoted passages across 77 answers) |
-| Quotes found verbatim at the cited paragraph | **100%** (284/284 dev, 179/179 held-out), checked independently against the stored text |
+| Unsupported statements displayed | **0** (dev and held-out, 461 quoted passages across 77 answers) |
+| Quotes found verbatim at the cited paragraph | **100%** (284/284 dev, 177/177 held-out), checked independently against the stored text |
 | Answers without citations | **0** |
 | Fault injection: corrupted claims the verifier blocks | **100%** across 10 corruption types (fake case names, altered numbers, flipped meaning, removed negations, fabricated quotes...) |
 | Phase 1 gates (retrieval, abstain, false premise, prompt injection, style invariance) | **11/11 pass** ([`eval/reports/latest.md`](eval/reports/latest.md)) |
@@ -175,16 +175,28 @@ Every change was chosen on the dev set; the held-out set only measures. Its firs
 
 Dense retrieval (`all-minilm` embeddings fused with BM25) was also measured and not adopted: 36 vs 37 first Article, twice the answer time.
 
+**Structure-aware retrieval (STAIR), measured** ([`eval/reports/stair.md`](eval/reports/stair.md))
+
+STAIR (Kumar et al., IBM, 2026) retrieves by reading a document's table of contents and naming the section that answers the query. The Constitution has an official one (the Arrangement of Articles), now parsed into Parts, chapters, group headings and Article titles. The local model reads it and names up to 3 Articles, with decoding constrained to real Article numbers.
+
+| Finding the Article (dev, 47) | Recall@1 | Recall@3 |
+|---|---|---|
+| Keyword search over the Constitution | 18/47 | 32/47 |
+| STAIR, untrained `qwen3:1.7b` on a laptop CPU | 2/47 | 2/47 |
+
+Fused into the full ranking it only took Articles away (boost 0.2 / 0.4 / 0.6: 36 / 35 / 27 vs 36 first Article) and added ~17 s per question, so it is off by default (`HIL_USE_STAIR`). This matches the paper, where models that were not fine-tuned scored below BM25 (Claude Haiku 4.5: 45.6% vs 59.5%); STAIR's gains come from fine-tuning, planned for a GPU in Phase 2. Adding each Article's table-of-contents path to its indexed text did not help either (36/47, Recall@3 32 -> 31). What the table of contents did give: it exposed 15 Articles in force that the parser had missed (5, 36, 131, 132, 323, 331-334, 395...), now recovered, and every Article page shows where it sits ("PART III — FUNDAMENTAL RIGHTS › Right to Freedom").
+
 **Engineering checks**
 
 | Check | Result |
 |---|---|
 | Parser gold set, 50 judgments checked against their PDFs ([`eval/reports/parse_audit.md`](eval/reports/parse_audit.md)) | 100% citation, neutral citation, date, bench and paragraph count |
 | Parser audit, all 384 judgments | 99% complete metadata, 100% paragraphs numbered 1..N, 3 headnote leaks, median 99% of text captured |
+| Constitution coverage | 471/471 Articles listed in the official Arrangement of Articles, each with its Part, chapter and group heading |
 | OCR | Pages without a text layer are OCRed with Tesseract; tested on a real image-only PDF |
 | Local load test, 120 requests, 8 concurrent, fresh server | 0 errors; p50 1.8 s, p95 9.5 s (8 uncached questions share one CPU-bound process); one user at a time: ~2 s |
 | MCP server | Verified end to end over stdio and Streamable HTTP with the official MCP Python client (`tests/test_mcp_protocol.py`); `make inspector` opens the MCP Inspector |
-| Test suite | 89 passing |
+| Test suite | 95 passing |
 
 **Read these numbers honestly**
 
