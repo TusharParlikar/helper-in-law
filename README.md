@@ -144,10 +144,10 @@ Measured on the live corpus: the **Constitution of India** (all 471 Articles in 
 |---|---|---|
 | Correct Article shown for the situation | **91%** (43/47) | **57%** (17/30) |
 | Correct Article is the first one shown | **77%** (36/47) | **50%** (15/30) |
-| Articles shown that are on point (precision) | **63%** (43/68) | **51%** (18/35) |
+| Articles shown that are on point (precision) | **63%** (43/68) | **50%** (18/36) |
 | A cited Supreme Court judgment applies that Article | **94%** (44/47) | **87%** (26/30) |
 | Out-of-scope questions refused ("not found", no guessing) | **100%** (8/8) | **100%** (8/8) |
-| Median / 95th-percentile answer time | 0.8 s / 1.1 s | 0.7 s / 1.5 s |
+| Median / 95th-percentile answer time | 0.8 s / 1.2 s | 0.6 s / 1.4 s |
 
 Every change was chosen on the dev set; the held-out set only measures. Its first run, before parent expansion and the parser fixes, scored 53% / 47% / 44% / 63% on the four rows above. The remaining dev-to-held-out gap is how much the lay-to-legal vocabulary is fitted to the dev wording. It still never shows an unsupported statement. Every miss is listed in [`eval/reports/scenarios.md`](eval/reports/scenarios.md) and [`eval/reports/scenarios_heldout.md`](eval/reports/scenarios_heldout.md).
 
@@ -196,7 +196,42 @@ Fused into the full ranking it only took Articles away (boost 0.2 / 0.4 / 0.6: 3
 | OCR | Pages without a text layer are OCRed with Tesseract; tested on a real image-only PDF |
 | Local load test, 120 requests, 8 concurrent, fresh server | 0 errors; p50 1.8 s, p95 9.5 s (8 uncached questions share one CPU-bound process); one user at a time: ~2 s |
 | MCP server | Verified end to end over stdio and Streamable HTTP with the official MCP Python client (`tests/test_mcp_protocol.py`); `make inspector` opens the MCP Inspector |
-| Test suite | 95 passing |
+| Test suite | 99 passing |
+
+**Intensive testing** ([`eval/reports/campaign.md`](eval/reports/campaign.md), `make eval-campaign`)
+
+Every response below was re-checked independently against the stored text: each displayed statement must be entailed by its quote, and each quote must sit verbatim at its cited paragraph.
+
+| Test | Result |
+|---|---|
+| Responses checked (77 scenarios + 68 out-of-scope questions x 18 answer styles, plus rewrites and attacks) | **3,380** |
+| Unsupported statements displayed | **0** (95% upper bound 0.09% of responses) |
+| Citations verbatim at the cited paragraph | **11,403 / 11,403** |
+| Same question, same answer (137 questions, 3 processes with different hash seeds) | **identical every time** |
+| Style invariance: same evidence for every structure and tone; Brief ⊆ Standard ⊆ Detailed | **145 / 145** |
+| Corrupted claims blocked (10 fault types on real answers) | **3,736 / 3,744** (99.8%) |
+| Prompt attacks resisted (fake repeal, "no citations", "skip verification", invented precedent, "no disclaimer") | **385 / 385** |
+| Off-topic / foreign-law / non-constitutional questions refused | 37/38 · 14/15 · 9/15 |
+| Hostile inputs: REST API (41) / MCP tool calls (21) | 0 server errors / 0 crashes |
+
+| The situation rewritten as... | First Article correct (clean text: 51/77) |
+|---|---|
+| lower case / no punctuation | 51 / 50 |
+| with typos (every 7th long word) | 43 |
+| wrapped in chat ("Sir, urgent query... Kindly advise") / a second wording | 49 / 50 |
+
+The 8 corrupted claims not blocked: 6 changed footnote markers glued to a word ("Kedar Nath Singh2" -> "Singh4", not a fact of the text), 1 quote swap where the other source holds the same sentence, and 1 added conclusion ("...and the accused must therefore be acquitted") that the lexical judge misses; a model judge is planned (Phase 2). Attacks never put their claim on screen, but they do pull retrieval off course: with "Article 21 has been repealed" or a Kesavananda request appended, the first Article is right 38/77 and 37/77 times (51 clean). Non-constitutional Indian-law questions (stamp duty, GST, gratuity) are often answered with the nearest constitutional provision rather than refused.
+
+The first run of this campaign found real bugs, all fixed and re-measured above:
+
+| Found | Before | After |
+|---|---|---|
+| Same question gave different Articles in different processes (precedent vote iterated a set) | nondeterministic | identical across seeds |
+| Changed dates and clause numbers passed the verifier (numbers compared as sets; "twenty-four" read as 20 and 4) | 273/300 altered numbers blocked | all except glued footnote markers |
+| Chatty wrapping crowded out the facts ("query", "kindly" outranked "custody") | 25/77 first Article correct | 49/77 |
+| One everyday word ("water", "old") let off-topic questions through | 34/38 refused | 37/38 |
+| Foreign-law questions answered with Indian Articles | 3/15 refused | 14/15 |
+| A docket number ("S247278") could be altered unnoticed | not checked | checked |
 
 **Read these numbers honestly**
 
@@ -205,7 +240,7 @@ Fused into the full ranking it only took Articles away (boost 0.2 / 0.4 / 0.6: 3
 - With the LLM on (Ollama `qwen3:1.7b`, CPU only) an answer takes about 45-50 s once the model is loaded. The prompt carries only the three best-matching sentences per source (2,050 -> 1,277 tokens), but generation runs at about 9 tokens/s on a laptop CPU, so the 10-second target needs a GPU or a hosted model. Verbatim mode, the default everywhere, meets it.
 - 384 judgments is a small corpus; a scenario whose leading precedent is not in it can still get the right Article but weaker case support.
 
-Reproduce: `uv run python eval/run_scenarios.py [--heldout]`, `eval/run_ablation.py`, `eval/run_parse_audit.py`, and `eval/load_test.py` against a local API. Building them found and fixed real bugs: report citations such as "[1993] 2 SCR 581" being misread as paragraph numbers, a slow quote matcher, off-topic questions matching common words, paragraphs merged when a scan put a bullet or margin letter before the number, HTTP 500s from a shared SQLite connection under concurrent requests, and a 106-second cold start from every first request rebuilding the same index statistics.
+Reproduce: `uv run python eval/run_scenarios.py [--heldout]`, `eval/run_ablation.py`, `eval/run_parse_audit.py`, `eval/run_campaign.py`, `eval/run_stair.py`, and `eval/load_test.py` against a local API. Building them found and fixed real bugs: report citations such as "[1993] 2 SCR 581" being misread as paragraph numbers, a slow quote matcher, off-topic questions matching common words, paragraphs merged when a scan put a bullet or margin letter before the number, HTTP 500s from a shared SQLite connection under concurrent requests, and a 106-second cold start from every first request rebuilding the same index statistics.
 
 ---
 
