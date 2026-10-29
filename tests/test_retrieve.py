@@ -74,3 +74,50 @@ def test_excerpt_keeps_best_sentences_verbatim_in_order() -> None:
     text = "⟦4⟧ The weather was fine. The arrest was made at night. ⟦5⟧ Lunch followed. The detenu was not told the grounds of arrest."
     out = excerpt(text, "arrested without being told the grounds of arrest", k=2)
     assert out == "The arrest was made at night. The detenu was not told the grounds of arrest."
+
+
+def test_stair_constrains_to_the_table_and_falls_back(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from helperinlaw.core import ollama
+    from helperinlaw.core.types import TocEntry
+    from helperinlaw.retrieve import stair
+
+    s = Store(":memory:")
+    s.replace_toc([
+        TocEntry(number="14", title="Equality before law", part="PART III — FUNDAMENTAL RIGHTS", group="Right to Equality"),
+        TocEntry(number="21", title="Protection of life and personal liberty", part="PART III — FUNDAMENTAL RIGHTS", group="Right to Freedom"),
+        TocEntry(number="22", title="Protection against arrest and detention in certain cases", part="PART III — FUNDAMENTAL RIGHTS", group="Right to Freedom"),
+    ])
+    seen = {}
+
+    def fake(model, system, user, schema, options=None, timeout=120):  # type: ignore[no-untyped-def]
+        seen.update(system=system, enum=schema["properties"]["articles"]["items"]["enum"])
+        return {"articles": ["22", "21", "22"]}
+
+    monkeypatch.setattr(ollama, "chat_json", fake)
+    stair._pick.cache_clear()
+    on = Settings(use_stair=True, db_path=":memory:")
+    assert stair.stair_articles(s, on, "arrested without being told why") == ["22", "21"]  # order kept, no repeats
+    assert seen["enum"] == ["14", "21", "22"]  # only Articles in the table can be named
+    assert "Right to Freedom\n   21. Protection of life and personal liberty" in seen["system"]
+
+    def down(*a, **k):  # type: ignore[no-untyped-def]
+        raise ollama.OllamaError("offline")
+
+    monkeypatch.setattr(ollama, "chat_json", down)
+    stair._pick.cache_clear()
+    assert stair.stair_articles(s, on, "another situation") == []  # offline: keyword search alone
+    assert stair.stair_articles(s, Settings(use_stair=False, db_path=":memory:"), "x") == []
+
+
+def test_stair_picks_are_boosted(store: Store, cfg: Settings, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    import helperinlaw.ground.pipeline as pipeline
+
+    question = "My client's freedom of speech was restricted after an online post."
+
+    def score(sources: list) -> float:  # type: ignore[type-arg]
+        return max((x.score for x in sources if x.chunk.case_id == "coi-21"), default=0.0)
+
+    base, _ = retrieve(store, cfg, question, None, Profile())
+    monkeypatch.setattr(pipeline, "stair_articles", lambda *a: ["21"])
+    with_stair, _ = retrieve(store, cfg, question, None, Profile())
+    assert score(with_stair) >= score(base) + pipeline.STAIR_BOOST - 1e-6  # Article 21 is a candidate, boosted
