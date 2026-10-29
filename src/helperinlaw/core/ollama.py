@@ -26,8 +26,16 @@ def _post(path: str, body: dict[str, Any], timeout: float = 120) -> dict[str, An
         raise OllamaError(f"Ollama {path} failed: {e}") from e
 
 
-def chat_json(model: str, system: str, user: str, schema: dict[str, Any]) -> dict[str, Any]:
-    """One chat turn constrained to `schema`. Temperature 0, thinking off."""
+def chat_json(
+    model: str,
+    system: str,
+    user: str,
+    schema: dict[str, Any],
+    options: dict[str, Any] | None = None,
+    timeout: float = 120,
+) -> dict[str, Any]:
+    """One chat turn constrained to `schema`. Temperature 0, thinking off. `options` adds to or
+    overrides the model options (e.g. a larger `num_ctx`)."""
     out = _post(
         "/api/chat",
         {
@@ -38,8 +46,9 @@ def chat_json(model: str, system: str, user: str, schema: dict[str, Any]) -> dic
             "think": False,
             "keep_alive": "30m",  # reloading the model costs ~15 s on CPU
             # Capped output keeps latency bounded; truncated JSON fails parsing -> caller falls back.
-            "options": {"temperature": 0, "num_predict": 512},
+            "options": {"temperature": 0, "num_predict": 512, **(options or {})},
         },
+        timeout=timeout,
     )
     try:
         parsed: dict[str, Any] = json.loads(out["message"]["content"])
