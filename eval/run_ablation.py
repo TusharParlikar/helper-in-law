@@ -44,7 +44,7 @@ def no_idf(store, index_version):  # type: ignore[no-untyped-def]
 
 CONFIGS = [
     ("Full system", []),
-    ("- lay-to-legal vocabulary", [(rewrite, "LEGAL_TERMS", {}), (rerank, "LEGAL_TERMS", {}), (gate, "LEGAL", gate.LEGAL_WORDS)]),
+    ("- lay-to-legal vocabulary", [(rewrite, "LEGAL_TERMS", {}), (rerank, "LEGAL_TERMS", {}), (gate, "LAY", set())]),
     ("- precedent vote for Articles", [(pipeline, "PRECEDENT_BOOST", 0.0)]),
     ("- IDF weighting in reranker", [(rerank, "idf_table", no_idf)]),
     ("- runner-up rule (always 2 Articles)", [(claim_extract, "RUNNER_UP", 0.0)]),

@@ -31,11 +31,33 @@ husband dowry murder theft fraud cheating tax""".split()}
 SECTION_LIKE = re.compile(r"\b\d{1,4}[A-Z]{1,3}\b")  # "65B", "304B", "21A": a provision, whatever the Act
 
 
-LEGAL = LEGAL_WORDS | {stem(k) for k in LEGAL_TERMS}
+# Lay words the rewrite maps to legal terms ("told" -> informed, "water" -> right to water). Each is
+# an everyday word, so one alone doesn't make a question legal ("boiling point of water").
+LAY = {stem(k) for k in LEGAL_TERMS} - LEGAL_WORDS
+LEGAL = LEGAL_WORDS | LAY  # kept for the ablation runner
+
+_PLACE = (r"(?:the\s+)?(?:US|U\.S\.|USA|United States|America|UK|U\.K\.|United Kingdom|England|Britain|"
+          r"Canada|Ontario|Australia|Germany|Japan|Europe|European Union|California|Texas|New York|Florida)")
+FOREIGN = re.compile(
+    r"\b(?:American|British|English|Canadian|Australian|German|Japanese|European)\s+"
+    r"(?i:law|laws|courts?|constitution|parliament|statutes?|convention)\b"
+    # Case-sensitive "US" (not the pronoun "us"); the nouns after it in any case.
+    r"|\b(?:US|U\.S\.|USA|UK|U\.K\.)\b.{0,30}?\b(?i:law|laws|courts?|constitution|congress|amendment|patent)\b"
+    rf"|\b(?:in|of|under)\s+{_PLACE}\b"
+)
+INDIA = re.compile(r"\b(?:India|Indian|Bharat)\b")
 
 
 def legal_question(q: Query) -> bool:
-    return bool(q.statutes or SECTION_LIKE.search(q.text) or {stem(t) for t in terms(q.text)} & LEGAL)
+    words = {stem(t) for t in terms(q.text)}
+    return bool(q.statutes or SECTION_LIKE.search(q.text) or words & LEGAL_WORDS or len(words & LAY) >= 2)
+
+
+def foreign(question: str) -> str:
+    """The foreign jurisdiction a question is about ("" when none, or when India is named too).
+    Answering it from Indian sources would mislead, so the pipeline declines instead."""
+    m = FOREIGN.search(question)
+    return m.group(0).strip() if m and not INDIA.search(question) else ""
 
 
 def enough_evidence(

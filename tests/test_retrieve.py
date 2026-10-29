@@ -121,3 +121,31 @@ def test_stair_picks_are_boosted(store: Store, cfg: Settings, monkeypatch) -> No
     monkeypatch.setattr(pipeline, "stair_articles", lambda *a: ["21"])
     with_stair, _ = retrieve(store, cfg, question, None, Profile())
     assert score(with_stair) >= score(base) + pipeline.STAIR_BOOST - 1e-6  # Article 21 is a candidate, boosted
+
+
+def test_gate_needs_a_legal_word_or_two_lay_words() -> None:
+    from helperinlaw.retrieve.evidence_gate import legal_question
+
+    # One everyday word the rewrite knows ("water", "old", "tell") is not a legal question...
+    assert not legal_question(understand("What is the boiling point of water at high altitude?"))
+    assert not legal_question(understand("What should I feed a two-month-old puppy?"))
+    # ...two of them, or one legal word, are.
+    assert legal_question(understand("Factories are polluting the river the village depends on for drinking water."))
+    assert legal_question(understand("My client was arrested at night."))
+
+
+def test_foreign_law_is_declined() -> None:
+    from helperinlaw.retrieve.evidence_gate import foreign
+
+    assert foreign("Under the US Fourth Amendment, can police search my car?")
+    assert foreign("How do I file for divorce in California?")
+    assert foreign("What are the requirements for a valid will under English law?")
+    assert not foreign("Tell us about the law on arrest.")  # the pronoun, not the country
+    assert not foreign("My client, an NRI back from the US, was arrested at Delhi airport.")
+    assert not foreign("My client in India studied in the UK and was denied a passport.")
+
+
+def test_conversational_words_do_not_outrank_facts() -> None:
+    from helperinlaw.retrieve.understand import terms
+
+    assert terms("Sir, urgent query. Kindly advise: my client was arrested.") == ["arrested"]
