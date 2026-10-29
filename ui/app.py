@@ -5,6 +5,7 @@ needed. Deployed as a shared demo (Streamlit Community Cloud), set HIL_DEMO=true
 docs/deploy-streamlit.md."""
 
 import gzip
+import os
 import shutil
 import sys
 import uuid
@@ -40,8 +41,10 @@ def database() -> None:
     db = Path(Settings().db_path)
     if not db.exists() and DEMO_DB.exists():
         db.parent.mkdir(parents=True, exist_ok=True)
-        with gzip.open(DEMO_DB, "rb") as f, db.open("wb") as out:
+        tmp = db.with_suffix(".tmp")  # a crash mid-write must not leave a truncated database
+        with gzip.open(DEMO_DB, "rb") as f, tmp.open("wb") as out:
             shutil.copyfileobj(f, out)
+        os.replace(tmp, db)
 
 
 @st.cache_resource
@@ -67,7 +70,7 @@ def reader() -> None:
         html = statute_page(s.lookup_statute(qp["statute"], qp.get("section", "")))
     st.markdown("<a href='./' target='_self'>← New search</a>", unsafe_allow_html=True)
     st.html(html)
-    if para := qp.get("para"):  # scroll to the cited paragraph once the page is drawn
+    if (para := qp.get("para", "")).isdigit():  # scroll to the cited paragraph once drawn
         st.html(
             f"<script>setTimeout(() => document.getElementById('para-{int(para)}')"
             "?.scrollIntoView({block: 'start'}), 300)</script>",
@@ -371,14 +374,19 @@ def render(r: Response) -> None:
         unsafe_allow_html=True,
     )
     if has_proof(r):  # a report only when there is verified proof to put in it
-        st.download_button(
-            "Download research report (PDF)",
-            data=build_report(r, ss.q, svc.store),
-            file_name=f"helper-in-law-report-{datetime.now():%Y%m%d-%H%M}.pdf",
-            mime="application/pdf",
-            type="primary",
-            icon=":material/description:",
-        )
+        try:
+            report_pdf = build_report(r, ss.q, svc.store)
+        except RuntimeError:  # no usable fonts on this host: keep the answer, drop the PDF
+            st.caption("PDF report unavailable on this server.")
+        else:
+            st.download_button(
+                "Download research report (PDF)",
+                data=report_pdf,
+                file_name=f"helper-in-law-report-{datetime.now():%Y%m%d-%H%M}.pdf",
+                mime="application/pdf",
+                type="primary",
+                icon=":material/description:",
+            )
     for n in r.notices:
         if r.confidence == "not_found" and n.startswith("Not found in the indexed"):
             continue  # the card below says it
