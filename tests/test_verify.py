@@ -82,6 +82,16 @@ def test_entities_subset() -> None:
     assert entities_supported("Rs. 1,00,000 bond", ["a bond of Rs. 100000"]) == set()
 
 
+def test_entities_in_order() -> None:
+    # Found on real answers by eval/run_campaign.py: both passed when numbers were compared as sets.
+    quote = "(2) Every person arrested shall be produced before the nearest magistrate within twenty-four hours."
+    assert entities_supported(quote.replace("(2)", "(4)"), [quote]) == {"4"}  # "twenty-four" is 24, not 20 + 4
+    assert entities_supported(quote, [quote]) == set()
+    dated = "Directions issued on 25 March 2019 were complied with by 27 police stations."
+    assert entities_supported("Directions issued on 27 March 2019 were complied with.", [dated]) == {"2019"}
+    assert entities_supported("Section 65B(4) and Section 65B", ["Section 65B(4) and Section 65B"]) == set()
+
+
 def test_lexical_judge() -> None:
     q = "The mere capacity of the wife to earn is not a ground to deny maintenance."
     assert (
