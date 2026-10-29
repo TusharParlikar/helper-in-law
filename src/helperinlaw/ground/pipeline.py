@@ -27,11 +27,13 @@ from helperinlaw.retrieve.evidence_gate import enough_evidence
 from helperinlaw.retrieve.hybrid import search
 from helperinlaw.retrieve.rerank import rerank
 from helperinlaw.retrieve.rewrite import rewrite
+from helperinlaw.retrieve.stair import stair_articles
 from helperinlaw.retrieve.understand import understand
 
 log = get_logger(__name__)
 MAX_PROVISIONS, MAX_JUDGMENTS = 4, 6
 PRECEDENT_BOOST = 0.4  # added to a provision cited by every retrieved judgment
+STAIR_BOOST = 0.4  # added to STAIR's first pick (2/3 and 1/3 of it to the next two); cfg.use_stair
 PARENT_WINDOW = 1  # neighbouring paragraphs added to each retrieved judgment passage
 Mode = Literal["synthesised", "extractive"]
 
@@ -69,6 +71,11 @@ def retrieve(
     extra = [c for a in applied if (c := store.get_chunk(cfg.index_version, f"{PREFIX}{a}:1-1"))]
     # (Weighting votes by how rare an Article is was tried and measured worse: eval/run_scenarios.py.)
     boost = {f"{PREFIX}{a}": PRECEDENT_BOOST * k / len(cases) for a, k in applied.items()}
+    # STAIR: the model reads the Constitution's table of contents and votes too (off by default).
+    for rank, a in enumerate(picks := stair_articles(store, cfg, question)):
+        if a not in applied and (c := store.get_chunk(cfg.index_version, f"{PREFIX}{a}:1-1")):
+            extra.append(c)
+        boost[f"{PREFIX}{a}"] = boost.get(f"{PREFIX}{a}", 0.0) + STAIR_BOOST * (1 - rank / len(picks))
     provisions = best("provision", MAX_PROVISIONS, 1, extra, boost)
     ranked = sorted(provisions + judgments, key=lambda x: -x[1])
     sources = [Source(id=f"S{i + 1}", chunk=c, score=s) for i, (c, s) in enumerate(ranked)]
