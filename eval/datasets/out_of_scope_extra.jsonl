@@ -1,0 +1,60 @@
+{"question": "What is the best way to cook basmati rice so it stays fluffy?", "kind": "off_topic"}
+{"question": "Who won the Cricket World Cup in 2011?", "kind": "off_topic"}
+{"question": "How do I reset my Wi-Fi router password?", "kind": "off_topic"}
+{"question": "Recommend a good laptop for video editing under one lakh rupees.", "kind": "off_topic"}
+{"question": "What is the capital of Australia?", "kind": "off_topic"}
+{"question": "Write a poem about the monsoon in Mumbai.", "kind": "off_topic"}
+{"question": "How many calories are there in a samosa?", "kind": "off_topic"}
+{"question": "Explain how photosynthesis works.", "kind": "off_topic"}
+{"question": "What is the difference between a virus and a bacterium?", "kind": "off_topic"}
+{"question": "How do I sort a list of dictionaries by a key in Python?", "kind": "off_topic"}
+{"question": "Suggest a seven-day itinerary for a trip to Kerala.", "kind": "off_topic"}
+{"question": "What is the boiling point of water at high altitude?", "kind": "off_topic"}
+{"question": "Translate 'good morning' into Tamil.", "kind": "off_topic"}
+{"question": "Which mutual fund gave the best returns last year?", "kind": "off_topic"}
+{"question": "How do I improve my handwriting?", "kind": "off_topic"}
+{"question": "What are the symptoms of dengue fever?", "kind": "off_topic"}
+{"question": "Tell me a joke about engineers.", "kind": "off_topic"}
+{"question": "What is the plot of the movie Sholay?", "kind": "off_topic"}
+{"question": "How far is the Moon from the Earth?", "kind": "off_topic"}
+{"question": "What should I feed a two-month-old puppy?", "kind": "off_topic"}
+{"question": "How do I make masala chai?", "kind": "off_topic"}
+{"question": "Which is the tallest building in the world?", "kind": "off_topic"}
+{"question": "Explain the rules of kabaddi.", "kind": "off_topic"}
+{"question": "How can I learn to play the guitar quickly?", "kind": "off_topic"}
+{"question": "What is the exchange rate between the rupee and the dollar today?", "kind": "off_topic"}
+{"question": "How do solar panels generate electricity?", "kind": "off_topic"}
+{"question": "Give me tips to prepare for a job interview.", "kind": "off_topic"}
+{"question": "What is the best time to visit Ladakh?", "kind": "off_topic"}
+{"question": "How do I remove a red wine stain from a carpet?", "kind": "off_topic"}
+{"question": "Summarise the history of the Mughal Empire in three lines.", "kind": "off_topic"}
+{"question": "Under the US Fourth Amendment, can police search my car without a warrant?", "kind": "foreign_law"}
+{"question": "What fine can a company face under the UK GDPR for a data breach?", "kind": "foreign_law"}
+{"question": "How do I file for divorce in California?", "kind": "foreign_law"}
+{"question": "What does the Second Amendment of the US Constitution protect?", "kind": "foreign_law"}
+{"question": "Is at-will employment legal in Texas?", "kind": "foreign_law"}
+{"question": "What is the statute of limitations for fraud in New York?", "kind": "foreign_law"}
+{"question": "Can a landlord in Ontario evict a tenant in winter?", "kind": "foreign_law"}
+{"question": "What does Miranda v. Arizona require police to tell a suspect?", "kind": "foreign_law"}
+{"question": "How does the European Court of Human Rights interpret Article 8 of the Convention?", "kind": "foreign_law"}
+{"question": "What are the requirements for a valid will under English law?", "kind": "foreign_law"}
+{"question": "Can the Australian Parliament override a High Court of Australia decision?", "kind": "foreign_law"}
+{"question": "What is the minimum wage in Germany?", "kind": "foreign_law"}
+{"question": "How long does a US patent last?", "kind": "foreign_law"}
+{"question": "Is same-sex marriage legal in Japan?", "kind": "foreign_law"}
+{"question": "What did Roe v. Wade decide and why was it overturned?", "kind": "foreign_law"}
+{"question": "What is the limitation period for filing a consumer complaint before the District Commission?", "kind": "non_constitutional"}
+{"question": "How much stamp duty is payable on a sale deed in Maharashtra?", "kind": "non_constitutional"}
+{"question": "What is the procedure to register a trademark in India?", "kind": "non_constitutional"}
+{"question": "What is the penalty for late filing of an income tax return?", "kind": "non_constitutional"}
+{"question": "How is gratuity calculated for a private sector employee?", "kind": "non_constitutional"}
+{"question": "What documents are needed to register a partnership firm?", "kind": "non_constitutional"}
+{"question": "What is the notice period to vacate under a leave and licence agreement?", "kind": "non_constitutional"}
+{"question": "How do I apply for a succession certificate for my father's bank deposits?", "kind": "non_constitutional"}
+{"question": "What are the GST rates on restaurant services?", "kind": "non_constitutional"}
+{"question": "Can a cheque bounce case be filed after the cheque is more than three months old?", "kind": "non_constitutional"}
+{"question": "What is the court fee for a money recovery suit of ten lakh rupees in Delhi?", "kind": "non_constitutional"}
+{"question": "How many days does a company have to file its annual return with the Registrar?", "kind": "non_constitutional"}
+{"question": "What is the age of retirement for central government employees?", "kind": "non_constitutional"}
+{"question": "How do I transfer ownership of a two-wheeler to another person?", "kind": "non_constitutional"}
+{"question": "What is the maximum term of imprisonment for theft under the Bharatiya Nyaya Sanhita?", "kind": "non_constitutional"}
