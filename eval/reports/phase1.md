@@ -10,7 +10,7 @@ Scope: everything Phase 1 of [`docs/ROADMAP.md`](../../docs/ROADMAP.md) asks for
 | Supreme Court judgments | 384, 2014-2024, CC-BY-4.0 open dataset; only the Court's own numbered paragraphs |
 | Index | v1, 8,946 passages of ~300 words on paragraph boundaries, SQLite FTS5 (BM25); parent expansion adds neighbouring paragraphs at answer time |
 | Interfaces | Streamlit UI (research, Constitution lookup, onboarding, PDF report), REST API, MCP server (stdio + Streamable HTTP) |
-| Tests | 95 passing |
+| Tests | 99 passing |
 
 ## Accuracy
 
@@ -18,7 +18,7 @@ Scope: everything Phase 1 of [`docs/ROADMAP.md`](../../docs/ROADMAP.md) asks for
 |---|---|---|---|
 | First Article correct | 77% (36/47) | 50% (15/30) | 47% (14/30) |
 | Correct Article shown | 91% (43/47) | 57% (17/30) | 53% (16/30) |
-| Precision of Articles shown | 63% (43/68) | 51% (18/35) | 44% (16/36) |
+| Precision of Articles shown | 63% (43/68) | 50% (18/36) | 44% (16/36) |
 | Cited judgment applies that Article | 94% (44/47) | 87% (26/30) | 63% (19/30) |
 | Answered (not abstained) | 100% (47/47) | 90% (27/30) | 90% (27/30) |
 | Out-of-scope refused | 8/8 | 8/8 | 8/8 |
@@ -41,6 +41,23 @@ Dense retrieval was measured as the fix for that and did not help: `all-minilm` 
 Fused with the precedent vote at boosts 0.2 / 0.4 / 0.6 the full system scored 36 / 35 / 27 first Article (36 without), at ~17 s per question after a 6-minute first call. A two-step walk (choose a Part or group, then an Article) and generating titles instead of numbers were also tried on spot checks and were no better. Adding each Article's table-of-contents path to its indexed text left the full system unchanged (Recall@3 32 -> 31). STAIR is off by default; the paper's own untrained baselines are below BM25 too, and its gains come from fine-tuning, planned on a GPU (Phase 2 W0).
 
 The table of contents still paid off: comparing it with the parsed Articles showed 15 Articles in force missing from the corpus (5, 36, 124C, 131, 132, 239A, 268, 323, 330A, 331-334, 371I, 395). Causes, all fixed and tested: rejected cross-reference matches swallowing the next heading; real headings ("395. Repeals.—", "131. Original jurisdiction...") read as footnotes, dropping the rest of the page; en-dash and ".-" heading endings; "3*[" markers; "371-I" numbers.
+
+## Intensive testing
+
+[`campaign.md`](campaign.md) (`make eval-campaign`, ~20 min). 3,380 responses (77 scenarios and 68 out-of-scope questions under 18 answer styles, plus 5 rewrites and 5 prompt attacks per scenario), each re-checked independently.
+
+| Test | Result |
+|---|---|
+| Unsupported statements displayed | 0 of 3,380 responses (95% upper bound 0.09%) |
+| Citations verbatim at the cited paragraph | 11,403 / 11,403 |
+| Determinism across 3 processes with different hash seeds | 137/137 questions identical |
+| Style invariance (same evidence per depth; Brief ⊆ Standard ⊆ Detailed) | 145/145 |
+| Corrupted claims blocked (10 fault types, real answers) | 3,736 / 3,744 (99.8%) |
+| Prompt attacks resisted | 385 / 385 |
+| Refused: off-topic / foreign law / non-constitutional Indian law | 37/38 · 14/15 · 9/15 |
+| Hostile REST requests / MCP calls | 0 server errors / 0 crashes |
+
+The first campaign run found six bugs, fixed and re-measured: answers changing with the process's hash seed (the precedent vote iterated a set); changed dates and clause numbers passing the verifier (numbers compared as a set, "twenty-four" split into 20 and 4); docket numbers not checked; conversational words outranking the facts (25 -> 49/77 first Article correct when a situation is wrapped in chat); a single everyday word letting off-topic questions through (34 -> 37/38 refused); foreign-law questions answered with Indian Articles (3 -> 14/15 refused). Remaining weaknesses: an added conclusion clause can pass the lexical entailment judge (1/467); appended attack text pulls retrieval off course (first Article 37-38/77 vs 51 clean) though it never reaches the screen; non-constitutional Indian-law questions are often answered with the nearest constitutional provision. Dev and held-out accuracy were unchanged by the fixes.
 
 ## Grounding
 
