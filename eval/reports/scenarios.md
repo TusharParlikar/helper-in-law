@@ -1,7 +1,7 @@
 # Scenario benchmark
 
 - Mode: verbatim passages (no LLM); search: keyword
-- Corpus: Constitution of India, 461 articles (official text as on 1 May 2024); 384 judgments (2014-2024)
+- Corpus: Constitution of India, 471 articles (official text as on 1 May 2024); 384 judgments (2014-2024)
 - 47 lawyer-style scenarios labelled with the governing Article(s), plus 8 out-of-scope questions.
 - Labels are standard constitutional law written by the developer, not yet reviewed by a lawyer.
 
@@ -18,7 +18,7 @@
 | Unsupported statements displayed | **0** |
 | Quotes found verbatim at their cited paragraph | 100% (284/284) |
 | Answers without citations | **0** |
-| Latency p50 / p95 | 0.77 s / 1.02 s |
+| Latency p50 / p95 | 0.77 s / 1.05 s |
 
 ## By area
 

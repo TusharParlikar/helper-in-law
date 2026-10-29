@@ -1,7 +1,7 @@
 # Scenario benchmark (held-out set)
 
 - Mode: verbatim passages (no LLM); search: keyword
-- Corpus: Constitution of India, 461 articles (official text as on 1 May 2024); 384 judgments (2014-2024)
+- Corpus: Constitution of India, 471 articles (official text as on 1 May 2024); 384 judgments (2014-2024)
 - 30 lawyer-style scenarios labelled with the governing Article(s), plus 8 out-of-scope questions.
 - Labels are standard constitutional law written by the developer, not yet reviewed by a lawyer.
 
@@ -10,15 +10,15 @@
 | Measure | Result |
 |---|---|
 | Correct Article is the top provision shown | 50% (15/30) |
-| Correct Article among the provisions shown | 60% (18/30) |
-| Provisions shown that are on point (precision) | 51% (19/37) |
+| Correct Article among the provisions shown | 57% (17/30) |
+| Provisions shown that are on point (precision) | 51% (18/35) |
 | A cited judgment applies that Article | 87% (26/30) |
 | Scenarios answered (not abstained) | 90% (27/30) |
 | Out-of-scope questions correctly refused | 100% (8/8) |
 | Unsupported statements displayed | **0** |
-| Quotes found verbatim at their cited paragraph | 100% (179/179) |
+| Quotes found verbatim at their cited paragraph | 100% (177/177) |
 | Answers without citations | **0** |
-| Latency p50 / p95 | 1.5 s / 2.99 s |
+| Latency p50 / p95 | 0.73 s / 1.54 s |
 
 ## By area
 
@@ -26,7 +26,7 @@
 |---|---|---|---|
 | arrest and detention | 2 | 100% (2/2) | 100% (2/2) |
 | criminal process | 3 | 33% (1/3) | 67% (2/3) |
-| discrimination | 2 | 50% (1/2) | 100% (2/2) |
+| discrimination | 2 | 50% (1/2) | 50% (1/2) |
 | education | 1 | 0% (0/1) | 0% (0/1) |
 | equality | 3 | 67% (2/3) | 100% (3/3) |
 | exploitation | 2 | 0% (0/2) | 0% (0/2) |
@@ -40,7 +40,7 @@
 | trade and occupation | 1 | 100% (1/1) | 100% (1/1) |
 | writs | 1 | 100% (1/1) | 100% (1/1) |
 
-## Misses (12)
+## Misses (13)
 
 | Scenario | Expected | Shown |
 |---|---|---|
@@ -50,6 +50,7 @@
 | A new law increases the punishment for an offence and the prosecution wants to apply it to | Art. 20 | Art. 19, Art. 14 |
 | A university suspended a student for posting a satirical cartoon about the vice-chancellor | Art. 19 | none |
 | Lawyers in a district have been forbidden from forming an association. | Art. 19 | Art. 17 |
+| A housing society refuses to sell flats to people of a particular religion. | Art. 15 | Art. 19 |
 | Women officers were denied permanent commission in the armed forces while men in the same  | Art. 14, 15, 16 | Art. 33 |
 | Migrant workers at a construction site are paid less than the minimum wage and cannot leav | Art. 23 | none |
 | Children are working in a glass factory where they handle furnaces. | Art. 24 | Art. 39 |
