@@ -1,4 +1,4 @@
-.PHONY: install lint format type test eval eval-llm eval-stair ingest index api mcp inspector ui
+.PHONY: install lint format type test eval eval-llm eval-stair eval-campaign ingest index api mcp inspector ui
 
 install:
 	uv sync --extra pdf --extra ui
@@ -24,6 +24,10 @@ eval-llm:
 # STAIR (table-of-contents retrieval) alone and fused; needs Ollama, ~25 min on a laptop CPU.
 eval-stair:
 	uv run python eval/run_stair.py
+
+# Intensive test campaign: 3,000+ responses re-checked, attacks, fault injection, fuzzing (~20 min).
+eval-campaign:
+	uv run python eval/run_campaign.py
 
 ingest:
 	uv run python -m helperinlaw.ingest data/sample
