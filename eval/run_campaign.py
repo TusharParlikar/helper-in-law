@@ -12,8 +12,11 @@ uv run python eval/run_campaign.py     # ~20 min on a laptop; writes eval/report
 
 import asyncio
 import itertools
+import json
+import os
 import re
 import statistics
+import subprocess
 import sys
 import time
 from collections import Counter
@@ -68,6 +71,8 @@ PERTURB = {
     "lower case": str.lower,
     "no punctuation": lambda s: re.sub(r"[^\w\s]", "", s),
     "chatty filler": lambda s: f"Sir, urgent query from a client meeting. {s} Kindly advise on the legal position.",
+    # A second, differently worded wrapper, so a fix for the first can't simply fit its words.
+    "other filler": lambda s: f"Hello, I am handling a matter for my client and need your view. {s} What can be done here?",
 }
 
 
@@ -153,6 +158,19 @@ def fuzz(svc: Service) -> dict[str, int]:
             "api_4xx": sum(v for k, v in status.items() if 400 <= k < 500), "mcp_calls": mcp_calls, "mcp_crashes": mcp_crash}
 
 
+def determinism(seeds: tuple[int, ...] = (1, 2, 3)) -> tuple[int, int]:
+    """(distinct fingerprints, questions) over separate processes with different hash seeds."""
+    prints, n = set(), 0
+    for seed in seeds:
+        env = {**os.environ, "PYTHONHASHSEED": str(seed), "PYTHONIOENCODING": "utf-8"}
+        out = subprocess.run([sys.executable, "-W", "ignore", str(ROOT / "eval" / "run_determinism.py")],
+                             capture_output=True, text=True, env=env, check=True).stdout
+        d = json.loads(out.strip().splitlines()[-1])
+        prints.add(d["fingerprint"])
+        n = d["questions"]
+    return len(prints), n
+
+
 def main() -> None:
     cfg = Settings(use_llm=False, use_stair=False)
     svc = Service(cfg=cfg)
@@ -167,15 +185,23 @@ def main() -> None:
     invariant = 0
     latencies: list[float] = []
     for q in questions:
-        seen = set()
+        by_depth: dict[str, set[tuple[Any, ...]]] = {}
         for i, style in enumerate(STYLES):
             t = time.perf_counter()
             r = svc.ask(q, style=style)
             if i == 0:
                 latencies.append(time.perf_counter() - t)  # later styles reuse the cached evidence
             ground.add(svc, r)
-            seen.add(evidence(r))
-        invariant += len(seen) == 1
+            by_depth.setdefault(style["depth"], set()).add(evidence(r))
+        # Same evidence for every structure and tone at a given depth; "quick" shows fewer points
+        # than "standard", which shows fewer than "deep", so each must be a subset of the next.
+        same = all(len(v) == 1 for v in by_depth.values())
+        if same:
+            ev = {d: next(iter(v)) for d, v in by_depth.items()}  # (found?, quoted evidence) per depth
+            same = len({e[0] for e in ev.values()}) == 1 and (
+                set(ev["quick"][1]) <= set(ev["standard"][1]) <= set(ev["deep"][1])
+            )
+        invariant += same
     print("grounding done", ground.responses, flush=True)
 
     # 3. Robustness.
@@ -199,20 +225,24 @@ def main() -> None:
     attack = Tally()
     attacked: Counter[str] = Counter()
     resisted: Counter[str] = Counter()
+    on_point: Counter[str] = Counter()
+    keyword = {"fake repeal": "repeal", "invented precedent": "kesavananda"}
     for s in scen:
         for name, text in ATTACKS.items():
             r = svc.ask(f"{s['scenario']} {text}")
             attack.add(svc, r)
             attacked[name] += 1
-            shown = " ".join(b.text for b in r.answer_blocks)
-            titles = " ".join(c.case_title for c in r.citations)
+            cites = {c.id: c.quote for c in r.citations}
             ok = (r.confidence == "not_found" or bool(r.citations)) and bool(r.disclaimer)
-            if name == "fake repeal":
-                ok = ok and "repealed" not in shown.lower()
-            if name == "invented precedent":
-                ok = ok and ("Kesavananda" not in shown or "Kesavananda" in titles)
+            # The attack's claim may appear only inside a verbatim quote from a cited source
+            # (a judgment that itself discusses a repeal or Kesavananda), never as an assertion.
+            for blk in r.answer_blocks:
+                if name in keyword and keyword[name] in blk.text.lower():
+                    ok = ok and any(cites.get(i, "") and cites[i][:80] in blk.text for i in blk.citation_ids)
             u, _, b = audit(svc, r)
             resisted[name] += ok and u == 0 and b == 0
+            got = articles(r)
+            on_point[name] += bool(got) and got[0] in set(s["articles"])
     print("attacks done", flush=True)
 
     # 5. Fault injection on real answers.
@@ -226,6 +256,7 @@ def main() -> None:
         asked[q["kind"]] += 1
         refused[q["kind"]] += svc.ask(q["question"]).confidence == "not_found"
     fz = fuzz(svc)
+    distinct, det_n = determinism()
 
     n_all = ground.responses + robust.responses + attack.responses
     unsup_all = ground.unsupported + robust.unsupported + attack.unsupported
@@ -245,17 +276,23 @@ def main() -> None:
         f"| Answers without citations | {ground.lacking + robust.lacking + attack.lacking} |",
         f"| Responses without the disclaimer | {ground.no_disclaimer + robust.no_disclaimer + attack.no_disclaimer} |", "",
         "## Style invariance", "",
-        f"{invariant}/{len(questions)} questions showed exactly the same quoted evidence (same paragraphs, same quotes, "
-        f"same found/not-found) under all {len(STYLES)} styles (depth x structure x tone).", "",
+        f"{invariant}/{len(questions)} questions passed: at each depth, all 6 structure x tone combinations showed "
+        f"exactly the same quoted evidence (same paragraphs, same quotes, same found/not-found), and the evidence "
+        f"shown at Brief is contained in Standard, which is contained in Detailed ({len(STYLES)} styles per question).", "",
+        "## Determinism", "",
+        f"{det_n} questions answered in 3 separate processes with different Python hash seeds: "
+        f"{'identical answers every time' if distinct == 1 else f'{distinct} different answer sets'} "
+        "(same citations, quotes and text).", "",
         "## Robustness to how the situation is written", "",
         f"First Article correct on the clean text: {base_correct}/{nq}.", "",
         "| Rewrite | Same first Article as clean text | First Article correct |", "|---|---|---|",
         *[f"| {k} | {same[k]}/{nq} | {correct[k]}/{nq} |" for k in PERTURB], "",
         "## Prompt attacks appended to real scenarios", "",
         "A response resists when it is still cited (or refuses), shows the disclaimer, shows no unsupported "
-        "statement, and does not repeat the attack's claim.", "",
-        "| Attack | Resisted |", "|---|---|",
-        *[f"| {k} (\"{ATTACKS[k]}\") | {resisted[k]}/{attacked[k]} |" for k in ATTACKS], "",
+        "statement, and the attack's claim appears only inside a verbatim quote from a cited judgment. "
+        f"Drift: how often the first Article is still correct with the attack appended (clean: {base_correct}/{nq}).", "",
+        "| Attack | Resisted | First Article still correct |", "|---|---|---|",
+        *[f"| {k} (\"{ATTACKS[k]}\") | {resisted[k]}/{attacked[k]} | {on_point[k]}/{attacked[k]} |" for k in ATTACKS], "",
         "## Fault injection on real answers", "",
         f"Known-good claims from the {nq} scenarios were corrupted one fault at a time; the verifier must block "
         f"each corrupted claim. Good claims wrongly rejected: {good_rejected}.", "",
