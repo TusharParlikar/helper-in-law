@@ -35,6 +35,55 @@ def test_article_headings_follow_the_sequence() -> None:
     assert "article 5" in arts[1].text  # a cross-reference does not start a new article
 
 
+def test_headings_the_old_parser_missed() -> None:
+    arts = parse_articles(lines(
+        "1. Name and territory of the Union.—(1) India, that is Bharat, shall be a Union of States.",
+        # A cross-reference that looks like a heading must not swallow the real one after it.
+        "4. Laws made under articles 2 and 3.—for the purposes of article 368. PART II CITIZENSHIP",
+        "5. Citizenship at the commencement of the Constitution.—At the commencement of this Constitution.",
+        "6. Rights of citizenship.––Notwithstanding anything in article 5.",  # en dashes
+        "3*[7. Rights of certain migrants.—Notwithstanding anything in articles 5 and 6.]",
+        "8. Reservation of seats for women.- (1) Seats shall be reserved.",
+        "8-A. Special provision with respect to Goa.—The Legislative Assembly shall consist of thirty members.",
+    ))
+    assert [a.number for a in arts] == ["1", "4", "5", "6", "7", "8", "8A"]
+
+
+def test_article_heading_is_not_a_footnote() -> None:
+    from helperinlaw.ingest.official import FOOTNOTE
+
+    assert FOOTNOTE.match("1. Subs. by the Constitution (Forty-second Amendment) Act, 1976")
+    assert FOOTNOTE.match("3. Rep. by the Constitution (Seventh Amendment) Act, 1956")
+    assert not FOOTNOTE.match("395. Repeals.—The Indian Independence Act, 1947")
+    assert not FOOTNOTE.match("131. Original jurisdiction of the Supreme Court.—Subject to")
+    assert not FOOTNOTE.match("323. Reports of Public Service Commissions.—(1) It shall be")
+
+
+def test_table_of_contents() -> None:
+    from helperinlaw.ingest.official import parse_toc
+
+    toc = parse_toc("\n".join([
+        "THE CONSTITUTION OF INDIA", "____________", "CONTENTS", "PREAMBLE", "PART I ",
+        "THE UNION AND ITS TERRITORY", "ARTICLES ", "1.", "Name and territory of the Union.",
+        "[2A.         Sikkim to be associated with the Union.—Omitted.]", "PART II", "CITIZENSHIP", "5.",
+        "Citizenship at the commencement of the Constitution.", "Contents", "ARTICLES", "(ii)",
+        "PART III", "FUNDAMENTAL RIGHTS", "General ", "12.", "Definition.", "Right to Equality", "14.",
+        "Equality before law.", "15. ", "Prohibition of discrimination on grounds of religion, race, caste, ",
+        "sex or place of birth.", "PART V", "THE UNION", "CHAPTER I.", "THE EXECUTIVE", "243-I.",
+        "Constitution of Finance Commission.", "334.", "334A.", "Reservation of seats to cease.",
+        "Reservation of seats for women take effect.", "SCHEDULES", "FIRST SCHEDULE",
+    ]))
+    by = {e.number: e for e in toc}
+    assert list(by) == ["1", "5", "12", "14", "15", "243I", "334", "334A"]  # 2A is omitted
+    assert by["1"].part == "PART I — THE UNION AND ITS TERRITORY"
+    assert (by["14"].group, by["12"].group) == ("Right to Equality", "General")
+    assert by["15"].title == "Prohibition of discrimination on grounds of religion, race, caste, sex or place of birth"
+    assert by["243I"].chapter == "CHAPTER I — THE EXECUTIVE"
+    # Two numbers stacked before their titles get the titles in order.
+    assert (by["334"].title, by["334A"].title) == (
+        "Reservation of seats to cease", "Reservation of seats for women take effect")
+
+
 def test_clean_markers() -> None:
     raw = "No person 1[shall be] deprived 3*** of his life. THE CONSTITUTION OF INDIA (Part III) 14 Right"
     assert clean_markers(raw) == "No person [shall be] deprived of his life."
@@ -54,8 +103,8 @@ def test_full_official_pdf_parses() -> None:
     from helperinlaw.ingest.official import english_lines
 
     arts = {a.number: a for a in parse_articles(english_lines(OFFICIAL_PDF))}
-    assert len(arts) > 440
-    for n in ("14", "19", "21", "21A", "22", "32", "226", "300A", "368"):
+    assert len(arts) > 470  # every Article in the official table of contents
+    for n in ("5", "14", "19", "21", "21A", "22", "32", "131", "226", "300A", "368", "395"):
         assert n in arts and len(arts[n].text) > 40
     assert not any("THE CONSTITUTION OF INDIA" in a.text for a in arts.values())
 
