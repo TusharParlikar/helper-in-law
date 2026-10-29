@@ -23,7 +23,7 @@ from helperinlaw.core.types import (
 from helperinlaw.ground.claim_extract import extractive_claims, llm_claims
 from helperinlaw.ground.verify import verify
 from helperinlaw.ingest.official import PREFIX, is_provision
-from helperinlaw.retrieve.evidence_gate import enough_evidence
+from helperinlaw.retrieve.evidence_gate import enough_evidence, foreign
 from helperinlaw.retrieve.hybrid import search
 from helperinlaw.retrieve.rerank import rerank
 from helperinlaw.retrieve.rewrite import rewrite
@@ -66,7 +66,9 @@ def retrieve(
     judgments = best("judgment", MAX_JUDGMENTS, 2)
     # Precedent votes for the provisions: an article the retrieved judgments apply is likely
     # the one governing the situation, even when the user's words don't match its text.
-    cases = {c.case_id for c, _ in judgments}
+    # In rank order, not a set: the vote's candidates are appended in this order, and a set's
+    # order changes with Python's hash seed, which made tied Articles swap between runs.
+    cases = list(dict.fromkeys(c.case_id for c, _ in judgments))
     applied = Counter(s for cid in cases for act, s in store.statutes_of(cid) if act == "CONST")
     extra = [c for a in applied if (c := store.get_chunk(cfg.index_version, f"{PREFIX}{a}:1-1"))]
     # (Weighting votes by how rare an Article is was tried and measured worse: eval/run_scenarios.py.)
@@ -117,6 +119,8 @@ def abstain(
 def answer_content(
     store: Store, cfg: Settings, question: str, filters: Filters | None, profile: Profile
 ) -> VerifiedClaimSet:
+    if where := foreign(question):
+        return abstain(question, [], [f"Helper in Law covers Indian law only; this question is about \"{where}\"."])
     sources, ok = retrieve(store, cfg, question, filters, profile)
     if not ok:
         return abstain(question, sources, ["Not found in the indexed judgments."])
