@@ -4,19 +4,26 @@ import re
 
 from helperinlaw.ground.text import NUMBER_WORDS
 
-TOKEN = re.compile(r"\b\d[\d,]*(?:\.\d+)?[a-z]?(?:\(\d+\))?|[a-z]+")
+TOKEN = re.compile(r"\b[a-z]{1,4}\d{3,}\b|\b\d[\d,]*(?:\.\d+)?[a-z]?(?:\(\d+\))?|[a-z]+")
 TENS = {"twenty": 20, "thirty": 30}
 COMPOUND = re.compile(r"\b(twenty|thirty)[- ](one|two|three|four|five|six|seven|eight|nine)\b")
 
 
+IDENTIFIER = re.compile(r"\b[A-Z]{1,4}\d{3,}\b")  # docket / file numbers: "S247278", "WP1234"
+
+
 def numbers(text: str) -> list[str]:
-    """Numbers in order of appearance; number words count ("ten" -> "10", "twenty-four" -> "24").
-    A footnote marker glued to a word ("Singh2") is not a number of the text."""
+    """Numbers in order of appearance; number words count ("ten" -> "10", "twenty-four" -> "24"),
+    and so do identifiers like "S247278". A footnote marker glued to a word ("Singh2",
+    "Committee20") is not a number of the text."""
+    ids = {m.group(0).lower() for m in IDENTIFIER.finditer(text)}
     low = COMPOUND.sub(lambda m: str(TENS[m.group(1)] + int(NUMBER_WORDS[m.group(2)])), text.lower())
     out = []
     for m in TOKEN.finditer(low):
         t = m.group(0)
-        if t[0].isdigit():
+        if t in ids:
+            out.append(t)
+        elif t[0].isdigit():
             out.append(t.replace(",", ""))
         elif t in NUMBER_WORDS:
             out.append(NUMBER_WORDS[t])

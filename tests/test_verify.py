@@ -90,6 +90,10 @@ def test_entities_in_order() -> None:
     dated = "Directions issued on 25 March 2019 were complied with by 27 police stations."
     assert entities_supported("Directions issued on 27 March 2019 were complied with.", [dated]) == {"2019"}
     assert entities_supported("Section 65B(4) and Section 65B", ["Section 65B(4) and Section 65B"]) == set()
+    # A docket number counts; a footnote marker glued to a word does not.
+    docket = "In re Kenneth Humphrey, S247278; 482 P.3d 1008 (2021), the court held"
+    assert entities_supported(docket.replace("S247278", "S247280"), [docket]) == {"s247280"}
+    assert entities_supported("the decision in Kedar Nath Singh4", ["the decision in Kedar Nath Singh2"]) == set()
 
 
 def test_lexical_judge() -> None:
