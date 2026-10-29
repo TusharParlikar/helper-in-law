@@ -510,7 +510,7 @@ with lookup:
         else:
             st.markdown(
                 f"<div class='card prov'><h4>Article {escape(a['article'])}. {escape(a['title'])}</h4>"
-                f"<blockquote>{escape(a['text'])}</blockquote><div class='links'>"
+                f"<div class='meta'>{escape(a['where'])}</div><blockquote>{escape(a['text'])}</blockquote><div class='links'>"
                 f"{link('Official text, exact page ↗', a['official_url'])}</div>"
                 f"<div class='meta' style='margin-top:8px'>Source: {escape(a['source'])}</div></div>",
                 unsafe_allow_html=True,

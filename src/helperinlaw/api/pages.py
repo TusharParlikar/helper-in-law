@@ -109,7 +109,7 @@ def statute_page(info: dict[str, Any]) -> str:
     law = info["law"]
     eq = "".join(f"<span class='chip'>{escape(e)}</span>" for e in info["equivalents"][1:])
     header = (
-        f"<h1>{escape(law['label'])}</h1><div class='meta'>{escape(info['query'])}</div>"
+        f"<h1>{escape(law['label'])}</h1><div class='meta'>{escape(info.get('where') or info['query'])}</div>"
         f"<div class='chips'>{eq}<a class='chip' href='{escape(law['official_url'])}' "
         f"target='_blank' rel='noopener'>"
         f"{'Official PDF ↗' if law.get('text') else 'Find official text on India Code ↗'}</a></div>"
