@@ -15,7 +15,9 @@ would you your about any all also been being court courts case cases law held ho
 under section sections act
 client clients my mine he she him her his hers they them their someone person mr mrs ms
 day days night nights week weeks month months year years one two three four got get gets
-want wants wanted asked ask also just even still like""".split()
+want wants wanted asked ask also just even still like
+sir madam dear hello hi kindly please urgent urgently query queries advise advice regards thanks
+thank help guidance opinion""".split()  # conversational: rare in judgments, so they'd outrank facts
 )
 
 SHORT_SECTION = re.compile(
