@@ -390,6 +390,7 @@ Set in `.env` (see `.env.example`). All variables use the `HIL_` prefix.
 | `HIL_EMBED_MODEL` | Embeddings (must match the model the index was built with) | `all-minilm` |
 | `HIL_USE_LLM` | Let the local model draft the analysis (every statement still verified) | `false` |
 | `HIL_USE_DENSE` | Use embeddings when the index has them (BM25 alone otherwise) | `true` |
+| `HIL_USE_STAIR` | STAIR: the local model reads the Constitution's table of contents and votes for Articles ([measured](eval/reports/stair.md); off until a fine-tuned model beats keyword search) | `false` |
 | `HIL_INDEX_VERSION` | Index version served | `v1` |
 | `HIL_EVIDENCE_MIN_SCORE` | Below this, the system abstains | `0.5` |
 | `HIL_BIND_HOST` | Server bind address | `127.0.0.1` |
