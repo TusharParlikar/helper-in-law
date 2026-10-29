@@ -292,8 +292,14 @@ class Service:
             "text": self.store.get_paragraphs(case.id)[0].text,
             "official_url": case.url,
             "source": COI_EDITION,
+            "where": info["where"],
             "judgments": [c for c in info["cases"] if not is_provision(c["case_id"])],
         }
+
+    def where(self, number: str) -> str:
+        """An Article's place in the official table of contents: "PART III — ... › Right to Freedom"."""
+        e = next((e for e in self.store.toc() if e.number == number), None)
+        return " › ".join(x for x in (e.part, e.chapter, e.group) if x) if e else ""
 
     def lookup_statute(self, act: str, section: str) -> dict[str, Any]:
         code = normalise_act(act) or act.upper()
@@ -331,6 +337,7 @@ class Service:
             "equivalents": [f"{a} {s} ({ACT_NAMES.get(a, [a])[0]})" for a, s in refs],
             "cases": cases[:MAX_SEARCH],
             "law": law_ref(code, section, self.cfg.public_url, self.store).model_dump(),
+            "where": self.where(section) if code == "CONST" else "",
             "note": "Correspondence table: verify against the official mapping.",
         }
 

@@ -152,3 +152,15 @@ def test_parent_expansion_adds_neighbouring_paragraphs(store: Store) -> None:
     out = expand(store, chunk)
     assert [n for n, _ in paragraphs_of(out.text)] == [mid.n - 1, mid.n, mid.n + 1]
     assert (out.para_from, out.para_to) == (mid.n - 1, mid.n + 1)
+
+
+def test_article_place_in_the_table_of_contents() -> None:
+    from helperinlaw.core.config import Settings
+    from helperinlaw.core.types import TocEntry
+
+    s = Store(":memory:")
+    s.replace_toc([TocEntry(number="19", title="Protection of certain rights regarding freedom of speech, etc",
+                            part="PART III — FUNDAMENTAL RIGHTS", group="Right to Freedom")])
+    svc = Service(s, Settings(use_llm=False, use_dense=False, db_path=":memory:"))
+    assert svc.where("19") == "PART III — FUNDAMENTAL RIGHTS › Right to Freedom"
+    assert svc.where("999") == ""
