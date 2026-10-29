@@ -40,6 +40,7 @@ What Phase 1 measured and could not finish on a laptop CPU.
 - [ ] Fresh held-out set (30+ new scenarios, written before any W0 change, never tuned on); the current held-out set has now been seen
 - [ ] Stronger embeddings on a GPU: `nomic-embed-text` (~7 h on the laptop CPU, minutes on a GPU), `bge-m3`, InLegalBERT; keep one only if it beats keyword-only on dev, then check on held-out
 - [ ] Cross-encoder reranker (`bge-reranker-v2-m3`) in place of the lexical reranker, same rule
+- [ ] Fine-tuned STAIR on a GPU: LoRA-tune a 7B model to map a situation plus the Constitution's table of contents (already parsed into the `toc` table) to Articles, as in the paper. Training pairs: generated situations per Article, plus real ones from judgment headnotes, which name the Articles applied. Untrained, it named the right Article first 2/47 times ([`stair.md`](../eval/reports/stair.md)); adopt only if the fine-tuned model beats keyword search on dev and a fresh held-out set
 - [ ] Capture concurrent and dissenting opinions (they restart their numbering and are dropped today; main source of low text coverage)
 - [ ] Remove the 3 remaining headnote leaks
 - [ ] Larger corpus (more SC years, then chosen High Courts), re-measuring after each step
