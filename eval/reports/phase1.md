@@ -6,35 +6,48 @@ Scope: everything Phase 1 of [`docs/ROADMAP.md`](../../docs/ROADMAP.md) asks for
 
 | Part | State |
 |---|---|
-| Constitution of India | 461 articles, official PDF (Legislative Department, as on 1 May 2024), each linked to its page |
+| Constitution of India | 471 Articles in force (all listed in the official Arrangement of Articles), official PDF (Legislative Department, as on 1 May 2024), each linked to its page; the Arrangement parsed into a table of contents |
 | Supreme Court judgments | 384, 2014-2024, CC-BY-4.0 open dataset; only the Court's own numbered paragraphs |
-| Index | v1, 8,936 passages of ~300 words on paragraph boundaries, SQLite FTS5 (BM25); parent expansion adds neighbouring paragraphs at answer time |
+| Index | v1, 8,946 passages of ~300 words on paragraph boundaries, SQLite FTS5 (BM25); parent expansion adds neighbouring paragraphs at answer time |
 | Interfaces | Streamlit UI (research, Constitution lookup, onboarding, PDF report), REST API, MCP server (stdio + Streamable HTTP) |
-| Tests | 89 passing |
+| Tests | 95 passing |
 
 ## Accuracy
 
 | Measure | Dev (47, tuned on) | Held-out (30, never tuned on) | Held-out, first run |
 |---|---|---|---|
 | First Article correct | 77% (36/47) | 50% (15/30) | 47% (14/30) |
-| Correct Article shown | 91% (43/47) | 60% (18/30) | 53% (16/30) |
-| Precision of Articles shown | 63% (43/68) | 51% (19/37) | 44% (16/36) |
+| Correct Article shown | 91% (43/47) | 57% (17/30) | 53% (16/30) |
+| Precision of Articles shown | 63% (43/68) | 51% (18/35) | 44% (16/36) |
 | Cited judgment applies that Article | 94% (44/47) | 87% (26/30) | 63% (19/30) |
 | Answered (not abstained) | 100% (47/47) | 90% (27/30) | 90% (27/30) |
 | Out-of-scope refused | 8/8 | 8/8 | 8/8 |
 
 Details: [`scenarios.md`](scenarios.md), [`scenarios_heldout.md`](scenarios_heldout.md).
 
-Every change after the first held-out run was chosen on the dev set (parent expansion, parser fixes); the held-out set was re-run only to measure them. Parent expansion is the main gain: judgment support for the right Article rose from 63% to 87% on held-out. Finding the right Article on new wording is still the weak point (50% first, 60% shown), because the lay-to-legal vocabulary (`retrieve/rewrite.py`) was written while reading dev misses.
+Every change after the first held-out run was chosen on the dev set (parent expansion, parser fixes, the recovered Articles); the held-out set was re-run only to measure them. Recovering the 15 missing Articles left dev unchanged and cost one held-out "shown" (18 -> 17/30). Parent expansion is the main gain: judgment support for the right Article rose from 63% to 87% on held-out. Finding the right Article on new wording is still the weak point (50% first, 57% shown), because the lay-to-legal vocabulary (`retrieve/rewrite.py`) was written while reading dev misses.
 
 Dense retrieval was measured as the fix for that and did not help: `all-minilm` embeddings fused with BM25 scored 36/47 first Article vs 37/47 keyword-only (41 vs 42 shown), at twice the answer time; dense for judgments only scored 35/47. It stays off by default. A stronger embedding model (`nomic-embed-text`, ~3 s per passage on this CPU, ~7 h to embed the corpus) or a GPU is the next thing to try, then a larger judgment corpus.
+
+## Structure-aware retrieval (STAIR)
+
+[`stair.md`](stair.md). STAIR (Kumar et al., IBM, arXiv 2609.03874) retrieves by reading a table of contents and naming the section that answers the query, with decoding constrained to real sections. Built here over the Constitution's official Arrangement of Articles (Parts -> chapters -> group headings -> 471 Article titles, `ingest/official.py:parse_toc`), with the local model (`retrieve/stair.py`).
+
+| Finding the Article (dev, 47) | Recall@1 | Recall@3 |
+|---|---|---|
+| Keyword search over the Constitution | 18/47 | 32/47 |
+| STAIR, untrained `qwen3:1.7b` | 2/47 | 2/47 |
+
+Fused with the precedent vote at boosts 0.2 / 0.4 / 0.6 the full system scored 36 / 35 / 27 first Article (36 without), at ~17 s per question after a 6-minute first call. A two-step walk (choose a Part or group, then an Article) and generating titles instead of numbers were also tried on spot checks and were no better. Adding each Article's table-of-contents path to its indexed text left the full system unchanged (Recall@3 32 -> 31). STAIR is off by default; the paper's own untrained baselines are below BM25 too, and its gains come from fine-tuning, planned on a GPU (Phase 2 W0).
+
+The table of contents still paid off: comparing it with the parsed Articles showed 15 Articles in force missing from the corpus (5, 36, 124C, 131, 132, 239A, 268, 323, 330A, 331-334, 371I, 395). Causes, all fixed and tested: rejected cross-reference matches swallowing the next heading; real headings ("395. Repeals.—", "131. Original jurisdiction...") read as footnotes, dropping the rest of the page; en-dash and ".-" heading endings; "3*[" markers; "371-I" numbers.
 
 ## Grounding
 
 | Measure | Result |
 |---|---|
 | Unsupported statements displayed | 0 (dev and held-out) |
-| Quotes verbatim at the cited paragraph | 284/284 dev, 179/179 held-out |
+| Quotes verbatim at the cited paragraph | 284/284 dev, 177/177 held-out |
 | Answers without citations | 0 |
 | Fault injection blocked | 100%, 10 corruption types |
 | Phase 1 gates | 11/11 ([`latest.md`](latest.md)) |
