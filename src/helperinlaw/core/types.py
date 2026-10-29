@@ -38,6 +38,16 @@ class Paragraph(BaseModel):
     section: str = "reasoning"
 
 
+class TocEntry(BaseModel):
+    """One Article in the Constitution's official table of contents (Arrangement of Articles)."""
+
+    number: str
+    title: str
+    part: str  # "PART III — FUNDAMENTAL RIGHTS"
+    chapter: str = ""  # "CHAPTER IV — THE UNION JUDICIARY"
+    group: str = ""  # "Right to Equality"
+
+
 class Chunk(BaseModel):
     id: str
     case_id: str

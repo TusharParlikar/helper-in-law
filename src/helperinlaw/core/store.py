@@ -14,7 +14,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from helperinlaw.core.types import Case, Chunk, Paragraph, Profile
+from helperinlaw.core.types import Case, Chunk, Paragraph, Profile, TocEntry
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS cases (
@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS feedback (
 CREATE TABLE IF NOT EXISTS eval_runs (
     id INTEGER PRIMARY KEY, git_sha TEXT, dataset TEXT, metrics_json TEXT,
     at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS toc (
+    ord INTEGER PRIMARY KEY, number TEXT, title TEXT, part TEXT, chapter TEXT, grp TEXT
 );
 """
 
@@ -132,6 +135,11 @@ class Store:
                 "INSERT INTO paragraphs VALUES (?,?,?,?)",
                 [(p.case_id, p.n, p.text, p.section) for p in paras],
             )
+
+    def delete_case(self, case_id: str) -> None:
+        with self.db:
+            for table, col in (("cases", "id"), ("paragraphs", "case_id"), ("statutes", "case_id")):
+                self.db.execute(f"DELETE FROM {table} WHERE {col}=?", (case_id,))
 
     def _case(self, row: sqlite3.Row) -> Case:
         d = dict(row)
@@ -210,6 +218,18 @@ class Store:
                 "INSERT INTO chunks_fts (text, chunk_id, index_version) VALUES (?,?,?)",
                 [(c.prefix + "\n" + c.text, c.id, index_version) for c in chunks],
             )
+
+    def replace_toc(self, entries: list[TocEntry]) -> None:
+        with self.db:
+            self.db.execute("DELETE FROM toc")
+            self.db.executemany(
+                "INSERT INTO toc VALUES (?,?,?,?,?,?)",
+                [(i, e.number, e.title, e.part, e.chapter, e.group) for i, e in enumerate(entries)],
+            )
+
+    def toc(self) -> list[TocEntry]:
+        rows = self.db.execute("SELECT number, title, part, chapter, grp FROM toc ORDER BY ord")
+        return [TocEntry(number=r[0], title=r[1], part=r[2], chapter=r[3], group=r[4]) for r in rows]
 
     def get_chunk(self, index_version: str, chunk_id: str) -> Chunk | None:
         row = self.db.execute(
