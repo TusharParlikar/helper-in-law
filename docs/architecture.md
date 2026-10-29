@@ -84,6 +84,9 @@ SQLite (`core/store.py`): one connection per thread, WAL mode and a busy timeout
 | Dense retrieval off by default | 47-scenario benchmark, BM25 vs BM25 + `all-minilm` (RRF) | 37 vs 36 first Article, 42 vs 41 shown, 1.4 s vs 3.4 s; dense for judgments only: 35. Not adopted |
 | Parent expansion, one paragraph each side | same | Precedent applies the Article 39 -> 44/47 (held-out 19 -> 26/30); two paragraphs: no further gain, slower |
 | Paragraph starts tolerate a stray bullet / margin letter, and mid-line starts after a sentence end (not after "Art.", "Sec." ...) | 50-judgment gold set | Paragraph count 48/50 -> 50/50; 95 of 384 judgments re-parsed |
+| STAIR (table-of-contents retrieval) off by default | 47-scenario benchmark, [`eval/reports/stair.md`](../eval/reports/stair.md) | Untrained `qwen3:1.7b` reading the official table of contents named the right Article first 2/47 times (keyword search: 18/47); fused into the ranking it cost Articles (boost 0.2 / 0.4 / 0.6: 36 / 35 / 27 vs 36 first Article) and ~17 s per question. Matches the paper: untrained models fall below BM25. Kept behind `HIL_USE_STAIR` for a fine-tuned model |
+| Article search text without the table-of-contents path | same | Adding "PART III — FUNDAMENTAL RIGHTS › Right to Freedom" to each Article's indexed text: full system unchanged (36/47), keyword-only Recall@3 32 -> 31. Not adopted |
+| Article headings: resume after a rejected match; footnotes only with footnote-sized numbers | The official Arrangement of Articles | 15 Articles in force were missing (5, 36, 131, 132, 323, 331-334, 371I, 395...); now 471/471 present, omitted stubs dropped |
 
 ## Phase 1 substitutions (deliberate)
 
