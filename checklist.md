@@ -40,6 +40,7 @@ Tracks every Phase 1 item in [`docs/ROADMAP.md`](docs/ROADMAP.md) (§6 milestone
 - [x] Query understanding → filters (court, years, statutes, Articles)
 - [x] Query rewrite: statute aliases + lay-to-legal vocabulary (rule-based, not LLM multi-query)
 - [x] Hybrid + RRF (BM25 + dense)
+- [x] Structure-aware retrieval (STAIR) over the Constitution's official table of contents: built and measured; untrained it lowered accuracy, so it is off by default ([`stair.md`](eval/reports/stair.md))
 - [x] Rerank: lexical, IDF-weighted (cross-encoder needs a GPU)
 - [x] Parent expansion: each judgment passage gets its neighbouring paragraphs (precedent support 39 -> 44/47 dev, 19 -> 26/30 held-out)
 - [x] Authority / recency boosts (profile-aware)
@@ -83,7 +84,7 @@ Tracks every Phase 1 item in [`docs/ROADMAP.md`](docs/ROADMAP.md) (§6 milestone
 
 ## M10 Hardening
 
-- [x] Unit / integration tests (89), parser golden tests, verification fault-injection tests (10 corruption types, 100% caught)
+- [x] Unit / integration tests (95), parser golden tests, verification fault-injection tests (10 corruption types, 100% caught)
 - [x] Baseline load test (local): 0 errors, warm p95 2.3 s, fresh-server p95 8.8 s
 - [x] README, architecture doc, reindex runbook
 - [x] Phase 1 evaluation report with ablation table ([`phase1.md`](eval/reports/phase1.md), [`ablation.md`](eval/reports/ablation.md))
@@ -95,7 +96,7 @@ Tracks every Phase 1 item in [`docs/ROADMAP.md`](docs/ROADMAP.md) (§6 milestone
 | Recall@10 (retrieval set) | ≥ 0.85 | 1.0 | [x] |
 | MRR | ≥ 0.60 | 0.983 | [x] |
 | Unsupported claims displayed | 0 | 0 (sample gates, 47 dev, 30 held-out) | [x] |
-| Citation accuracy | ≥ 0.99 | 1.0 (284/284 dev, 179/179 held-out) | [x] |
+| Citation accuracy | ≥ 0.99 | 1.0 (284/284 dev, 177/177 held-out) | [x] |
 | Responses lacking citations | 0 | 0 | [x] |
 | Abstain correctness on unanswerables | ≥ 0.90 | 1.0 (and 8/8 out-of-scope) | [x] |
 | Prompt-injection pass rate | 100% | 100% | [x] |
@@ -104,7 +105,7 @@ Tracks every Phase 1 item in [`docs/ROADMAP.md`](docs/ROADMAP.md) (§6 milestone
 | p95 `/ask` latency | ≤ 10 s | 2.3 s warm, 8.8 s fresh (verbatim default); 45-50 s with the LLM on | [x] |
 | Parser accuracy | ≥ 0.95 | 100% on the 50-judgment real gold set and the sample gold set; 99-100% automated audit on 384 judgments | [x] |
 
-Recall@10 and MRR are measured on the retrieval set over the sample corpus. On real scenarios the correct Article is shown for 91% (dev) and 60% (held-out) of situations, and a cited judgment applies it in 94% and 87%; see [`phase1.md`](eval/reports/phase1.md).
+Recall@10 and MRR are measured on the retrieval set over the sample corpus. On real scenarios the correct Article is shown for 91% (dev) and 57% (held-out) of situations, and a cited judgment applies it in 94% and 87%; see [`phase1.md`](eval/reports/phase1.md).
 
 ## What remains in Phase 1
 
