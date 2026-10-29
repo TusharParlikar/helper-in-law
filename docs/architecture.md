@@ -17,7 +17,9 @@ Every ingest is idempotent and resumable; a document that cannot be parsed goes 
 ```
 situation / question
   -> retrieve/understand     filters, statutes, Articles, case names
-  -> retrieve/evidence_gate  no legal vocabulary at all -> "not found" (off-topic questions)
+  -> retrieve/evidence_gate  a foreign jurisdiction ("in California", "English law") -> declined,
+                             Indian law only; no legal word and fewer than two lay words ->
+                             "not found" (off-topic questions)
   -> retrieve/rewrite        statute aliases (IPC<->BNS ...) + lay-to-legal terms
                              ("not told why" -> "informed of the grounds", "lawyer" -> "legal practitioner")
   -> retrieve/hybrid         BM25 (SQLite FTS5) [+ dense if embeddings exist], RRF fusion,
@@ -32,8 +34,8 @@ situation / question
                              neighbouring paragraphs)
   -> ground/claim_extract    the governing Article's best clause + verbatim judgment sentences
                              (or, with the LLM on, structured claims citing sources by id)
-  -> ground/verify           quote exists (exact, then word-aligned fuzzy), numbers/sections in the
-                             quote, entailment + negation scope, allowlist, injection, role check,
+  -> ground/verify           quote exists (exact, then word-aligned fuzzy), numbers/sections/dates/
+                             docket numbers in the quote in the same order, entailment + negation scope, allowlist, injection, role check,
                              duplicates, conflicts, overruled graph
   -> Verified Claim Set      (Stage A: style-independent, cached)
   -> present/presenter       depth, structure, tone, citation style (Stage B)
@@ -87,6 +89,10 @@ SQLite (`core/store.py`): one connection per thread, WAL mode and a busy timeout
 | STAIR (table-of-contents retrieval) off by default | 47-scenario benchmark, [`eval/reports/stair.md`](../eval/reports/stair.md) | Untrained `qwen3:1.7b` reading the official table of contents named the right Article first 2/47 times (keyword search: 18/47); fused into the ranking it cost Articles (boost 0.2 / 0.4 / 0.6: 36 / 35 / 27 vs 36 first Article) and ~17 s per question. Matches the paper: untrained models fall below BM25. Kept behind `HIL_USE_STAIR` for a fine-tuned model |
 | Article search text without the table-of-contents path | same | Adding "PART III — FUNDAMENTAL RIGHTS › Right to Freedom" to each Article's indexed text: full system unchanged (36/47), keyword-only Recall@3 32 -> 31. Not adopted |
 | Article headings: resume after a rejected match; footnotes only with footnote-sized numbers | The official Arrangement of Articles | 15 Articles in force were missing (5, 36, 131, 132, 323, 331-334, 371I, 395...); now 471/471 present, omitted stubs dropped |
+| Claim numbers matched in order, compound number words ("twenty-four" = 24), docket identifiers counted | Intensive campaign, fault injection on real answers | Altered dates and clause numbers had passed (sets let "27" match elsewhere in the quote); blocked faults 4,017/4,047 -> 3,736/3,744 on claims that pass as they are |
+| Precedent vote iterates judgments in rank order | Same 137 questions in processes with different hash seeds | A set's order made tied Articles swap between runs; now identical |
+| Conversational words are stop words | Scenarios wrapped in chat | "query", "kindly", "urgent" have higher IDF than "custody" and took the reranker's slots: 25 -> 49/77 first Article correct wrapped; dev unchanged |
+| Gate: one legal word or two lay words; foreign jurisdictions declined | 60 new out-of-scope questions | Off-topic 34 -> 37/38, foreign law 3 -> 14/15 refused; none of the 77 scenarios refused |
 
 ## Phase 1 substitutions (deliberate)
 
