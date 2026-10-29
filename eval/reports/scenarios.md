@@ -18,7 +18,7 @@
 | Unsupported statements displayed | **0** |
 | Quotes found verbatim at their cited paragraph | 100% (284/284) |
 | Answers without citations | **0** |
-| Latency p50 / p95 | 0.77 s / 1.05 s |
+| Latency p50 / p95 | 0.78 s / 1.18 s |
 
 ## By area
 

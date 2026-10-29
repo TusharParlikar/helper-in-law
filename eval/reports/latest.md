@@ -1,6 +1,6 @@
 # Phase 1 evaluation report
 
-- Commit: `3860313`
+- Commit: `4e6aced`
 - Mode: extractive, bm25
 - Corpus: 
 
@@ -17,7 +17,7 @@
 | false_premise_rejection | 1.0 | >= 0.9 | ✅ |
 | injection_pass_rate | 1.0 | == 1.0 | ✅ |
 | style_invariance | 1.0 | == 1.0 | ✅ |
-| p95_ask_latency_s | 0.019 | <= 10.0 | ✅ |
+| p95_ask_latency_s | 0.011 | <= 10.0 | ✅ |
 | parser_accuracy | 1.0 | >= 0.95 | ✅ |
 
 Also: answer rate 0.9, verification keep rate 0.976.

@@ -11,14 +11,14 @@
 |---|---|
 | Correct Article is the top provision shown | 50% (15/30) |
 | Correct Article among the provisions shown | 57% (17/30) |
-| Provisions shown that are on point (precision) | 51% (18/35) |
+| Provisions shown that are on point (precision) | 50% (18/36) |
 | A cited judgment applies that Article | 87% (26/30) |
 | Scenarios answered (not abstained) | 90% (27/30) |
 | Out-of-scope questions correctly refused | 100% (8/8) |
 | Unsupported statements displayed | **0** |
-| Quotes found verbatim at their cited paragraph | 100% (177/177) |
+| Quotes found verbatim at their cited paragraph | 100% (178/178) |
 | Answers without citations | **0** |
-| Latency p50 / p95 | 0.73 s / 1.54 s |
+| Latency p50 / p95 | 0.62 s / 1.4 s |
 
 ## By area
 
