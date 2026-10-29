@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     # Off by default: a CPU-only local model takes 30-60 s per answer; verbatim mode takes ~2 s.
     use_llm: bool = False
     use_dense: bool = True
+    # STAIR: the local model reads the Constitution's table of contents and votes for Articles.
+    use_stair: bool = False
     index_version: str = "v1"
 
     evidence_min_score: float = 0.5
