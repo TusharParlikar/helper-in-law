@@ -266,7 +266,7 @@ def main() -> None:
     nq = len(scen)
     lines = [
         "# Intensive test campaign (live corpus, verbatim mode)", "",
-        f"Corpus: Constitution of India (471 Articles) + 384 Supreme Court judgments. {nq} labelled scenarios "
+        f"Corpus: Constitution of India (471 Articles, the Preamble, 12 Schedules) + 384 Supreme Court judgments. {nq} labelled scenarios "
         f"(47 dev + 30 held-out), {len(oos)} out-of-scope questions, {len(STYLES)} answer styles. "
         f"Every displayed statement and citation was re-checked independently against the stored text "
         f"(`eval/run_eval.py:audit`). Run time {minutes:.0f} min.", "",
