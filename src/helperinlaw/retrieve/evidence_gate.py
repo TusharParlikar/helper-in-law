@@ -27,7 +27,12 @@ religious remedy reservation right rights rule rules scheme school service speec
 statute surety temple tender trial tribunal unconstitutional undertrial violated violation
 vote wages warrant women writ certificate mandatory valid invalid void lawful unlawful entitled
 liable liability obligation duty duties exempt exemption maintenance divorce marriage wife
-husband dowry murder theft fraud cheating tax""".split()}
+husband dowry murder theft fraud cheating tax
+preamble schedule schedules secular secularism sovereign socialist republic democratic federal
+amendment amend legislature legislator legislators mla mlas mp mps speaker governor president
+minister ministers cabinet election elections electoral disqualified disqualification defection
+impeachment ordinance emergency union centre panchayat municipality citizenship""".split()}
+# (Not the words of Article titles: those include "water", "name", "territory".)
 SECTION_LIKE = re.compile(r"\b\d{1,4}[A-Z]{1,3}\b")  # "65B", "304B", "21A": a provision, whatever the Act
 
 
