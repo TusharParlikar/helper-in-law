@@ -1,4 +1,4 @@
-.PHONY: install lint format type test eval eval-llm eval-stair eval-campaign ingest index api mcp inspector ui
+.PHONY: eval-criminal install lint format type test eval eval-llm eval-stair eval-campaign ingest index api mcp inspector ui
 
 install:
 	uv sync --extra pdf --extra ui
@@ -26,6 +26,9 @@ eval-stair:
 	uv run python eval/run_stair.py
 
 # Intensive test campaign: 3,000+ responses re-checked, attacks, fault injection, fuzzing (~20 min).
+eval-criminal:
+	uv run python eval/run_criminal.py
+
 eval-campaign:
 	uv run python eval/run_campaign.py
 
