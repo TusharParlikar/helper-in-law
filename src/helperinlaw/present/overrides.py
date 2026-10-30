@@ -6,6 +6,8 @@ are reported back as ignored (§5.4)."""
 import re
 from typing import Any
 
+from helperinlaw.ground.verify.injection import without_instructions
+
 RULES: list[tuple[re.Pattern[str], dict[str, Any]]] = [
     (
         re.compile(r"\b(shorter|brief(ly)?|quick(ly)?|tl;?dr|in short|concise)\b", re.I),
@@ -51,7 +53,7 @@ def parse_overrides(text: str) -> tuple[dict[str, Any], list[str]]:
 
 def strip_overrides(question: str) -> str:
     """The style words aren't part of the legal question; keep retrieval clean."""
-    q = question
+    q = without_instructions(question)  # whole sentences addressed to the system go first
     for rx, _ in RULES:
         q = rx.sub(" ", q)
     q = SAFEGUARD.sub(" ", q)

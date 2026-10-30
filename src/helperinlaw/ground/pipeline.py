@@ -22,7 +22,6 @@ from helperinlaw.core.types import (
 )
 from helperinlaw.ground.claim_extract import extractive_claims, llm_claims
 from helperinlaw.ground.verify import verify
-from helperinlaw.ground.verify.injection import without_instructions
 from helperinlaw.ingest.official import PREFIX, is_provision
 from helperinlaw.retrieve.evidence_gate import enough_evidence, foreign
 from helperinlaw.retrieve.hybrid import search
@@ -42,7 +41,7 @@ Mode = Literal["synthesised", "extractive"]
 def retrieve(
     store: Store, cfg: Settings, question: str, filters: Filters | None, profile: Profile
 ) -> tuple[list[Source], bool]:
-    question = correct_spelling(without_instructions(question), store.word_counts(cfg.index_version))
+    question = correct_spelling(question, store.word_counts(cfg.index_version))
     q = understand(question, filters)
     queries = rewrite(q)
 
