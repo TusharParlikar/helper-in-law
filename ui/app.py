@@ -321,11 +321,14 @@ def quotes(cs: list[Citation], refs: dict[str, int]) -> str:
 def provision_card(cs: list[Citation], refs: dict[str, int]) -> str:
     c = cs[0]
     art = c.citation.removeprefix("Art. ")
+    applying = (  # judgments are linked by Article; the Preamble and Schedules have no such index
+        link("Judgments applying it ↗", statute_url(svc.cfg.public_url, "CONST", art))
+        if c.citation.startswith("Art. ") else ""
+    )
     return (
         f"<div class='card prov'><h4>{escape(c.case_title)}</h4>"
         f"<div class='meta'>{escape(c.neutral_citation)}</div>{quotes(cs, refs)}"
-        f"<div class='links'>{link('Official text, exact page ↗', c.url)}"
-        f"{link('Judgments applying it ↗', statute_url(svc.cfg.public_url, 'CONST', art))}</div>"
+        f"<div class='links'>{link('Official text, exact page ↗', c.url)}{applying}</div>"
         f"<div class='meta' style='margin-top:8px'>Source: {escape(c.source)}</div></div>"
     )
 
@@ -482,18 +485,18 @@ with research:
 
 with lookup:
     st.markdown(
-        "<div class='hero'><h1 style='font-size:2rem'>Look up an Article</h1><p>Official text from the "
-        "Government of India's publication of the Constitution, with the exact page and the judgments "
+        "<div class='hero'><h1 style='font-size:2rem'>Look up the Constitution</h1><p>Any Article, the Preamble or a Schedule: official text from the "
+        "Government of India's publication, with the exact page and the judgments "
         "that apply it.</p></div>",
         unsafe_allow_html=True,
     )
     with st.form("lookup", border=True):
         l1, l2 = st.columns([5, 1], vertical_alignment="bottom")
-        number = l1.text_input("Article", placeholder="Article number, e.g. 21, 21A, 300A")
+        number = l1.text_input("Article", placeholder="e.g. 21, 21A, 300A, Preamble, Seventh Schedule")
         go = l2.form_submit_button("Look up", use_container_width=True)
     quick = st.pills(
         "Frequently cited",
-        ["14", "15", "19", "21", "21A", "22", "32", "226", "300A"],
+        ["Preamble", "14", "15", "19", "21", "21A", "22", "32", "226", "300A", "Seventh Schedule"],
         key="artpick",
     )
     art = number.strip() if go and number.strip() else quick
@@ -503,25 +506,27 @@ with lookup:
                 a = svc.get_article(art)
         except KeyError:
             st.error(
-                f"Article {art} was not found in the official text. It may have been omitted or repealed."
+                f"{art} was not found in the official text. It may have been omitted or repealed."
             )
         except OSError as e:
             st.error(f"Could not reach the official source: {e}")
         else:
             st.markdown(
-                f"<div class='card prov'><h4>Article {escape(a['article'])}. {escape(a['title'])}</h4>"
-                f"<div class='meta'>{escape(a['where'])}</div><blockquote>{escape(a['text'])}</blockquote><div class='links'>"
+                f"<div class='card prov'><h4>{escape(a['label'])}{'. ' + escape(a['title']) if a['title'] else ''}</h4>"
+                f"<div class='meta'>{escape(a['where'])}</div><blockquote>{escape(a['text']).replace(chr(10), '<br>')}</blockquote><div class='links'>"
                 f"{link('Official text, exact page ↗', a['official_url'])}</div>"
                 f"<div class='meta' style='margin-top:8px'>Source: {escape(a['source'])}</div></div>",
                 unsafe_allow_html=True,
             )
-            st.markdown(
-                f"<div class='label'>Indexed judgments applying Article {escape(a['article'])}</div>",
-                unsafe_allow_html=True,
-            )
-            if not a["judgments"]:
-                st.caption("None of the indexed judgments applies this Article yet.")
-            for c in a["judgments"]:
+            is_article = a["label"].startswith("Article ")  # judgments are indexed by the Articles they apply
+            if is_article:
+                st.markdown(
+                    f"<div class='label'>Indexed judgments applying {escape(a['label'])}</div>",
+                    unsafe_allow_html=True,
+                )
+                if not a["judgments"]:
+                    st.caption("None of the indexed judgments applies this Article yet.")
+            for c in a["judgments"] if is_article else []:
                 pdf = svc.store.get_case(c["case_id"])
                 st.markdown(
                     f"<div class='card case'><h4>{escape(c['title'])}</h4><div class='meta'>{escape(c['citation'])}"
