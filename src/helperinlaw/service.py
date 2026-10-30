@@ -18,7 +18,13 @@ from helperinlaw.core.types import (
 from helperinlaw.ground.pipeline import answer_content, retrieve
 from helperinlaw.ground.render import case_url, law_ref, render_citations, render_laws
 from helperinlaw.ground.verify.graph import treatment
-from helperinlaw.ingest.official import COI_EDITION, PREFIX, document_key, ingest_constitution, is_provision
+from helperinlaw.ingest.official import (
+    COI_EDITION,
+    PREFIX,
+    document_key,
+    ingest_constitution,
+    is_provision,
+)
 from helperinlaw.parse.statutes import ACT_NAMES, aliases, extract_statutes, normalise_act
 from helperinlaw.present.final_guard import guard
 from helperinlaw.present.overrides import parse_overrides, strip_overrides

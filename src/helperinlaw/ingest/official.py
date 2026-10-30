@@ -29,6 +29,11 @@ PREFIX = "coi-"
 def is_provision(case_id: str) -> bool:
     return case_id.startswith(PREFIX)
 
+
+def is_article(case_id: str) -> bool:
+    """An Article, not the Preamble or a Schedule."""
+    return is_provision(case_id) and case_id[len(PREFIX) : len(PREFIX) + 1].isdigit()
+
 FOOTNOTE = re.compile(
     # Footnote numbers restart on every page, so they stay small; "131. Original jurisdiction..."
     # and "395. Repeals.—" are Article headings, not notes.

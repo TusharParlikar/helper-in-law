@@ -4,6 +4,7 @@ Failure policy (§4.5): drop failed claims; too many dropped -> extractive mode;
 -> abstain.
 """
 
+import re
 from collections import Counter
 from typing import Literal
 
@@ -22,7 +23,7 @@ from helperinlaw.core.types import (
 )
 from helperinlaw.ground.claim_extract import extractive_claims, llm_claims
 from helperinlaw.ground.verify import verify
-from helperinlaw.ingest.official import PREFIX, is_provision
+from helperinlaw.ingest.official import PREFIX, is_article, is_provision
 from helperinlaw.retrieve.evidence_gate import enough_evidence, foreign
 from helperinlaw.retrieve.hybrid import search
 from helperinlaw.retrieve.rerank import rerank
@@ -35,6 +36,10 @@ MAX_PROVISIONS, MAX_JUDGMENTS = 4, 6
 PRECEDENT_BOOST = 0.4  # added to a provision cited by every retrieved judgment
 STAIR_BOOST = 0.4  # added to STAIR's first pick (2/3 and 1/3 of it to the next two); cfg.use_stair
 PARENT_WINDOW = 1  # neighbouring paragraphs added to each retrieved judgment passage
+# The Preamble and Schedules fill in the Articles (Article 246 -> Seventh Schedule) and match stray
+# words in long lists ("district" -> Sixth Schedule), so they rank behind Articles unless named.
+SUPPORTING_PENALTY = 0.2
+NAMES_SUPPORTING = re.compile(r"\b(schedule|preamble)\b", re.I)
 Mode = Literal["synthesised", "extractive"]
 
 
@@ -44,6 +49,10 @@ def retrieve(
     question = correct_spelling(question, store.word_counts(cfg.index_version))
     q = understand(question, filters)
     queries = rewrite(q)
+    named = bool(NAMES_SUPPORTING.search(question))
+
+    def penalty(case_id: str) -> float:
+        return SUPPORTING_PENALTY if is_provision(case_id) and not is_article(case_id) and not named else 0.0
 
     # A scenario needs both: the constitutional text that governs it and precedent applying it,
     # searched separately so one long judgment can't crowd the Constitution out.
@@ -53,7 +62,7 @@ def retrieve(
         seen = {c.id for c, _ in hits}
         hits += [(c, 0.0) for c in extra or [] if c.id not in seen]
         scored = [
-            (c, round(s + (boost or {}).get(c.case_id, 0.0), 4))
+            (c, round(s + (boost or {}).get(c.case_id, 0.0) - penalty(c.case_id), 4))
             for c, s in rerank(store, q, hits, profile, top=80, index_version=cfg.index_version)
         ]
         out: list[tuple[Chunk, float]] = []
