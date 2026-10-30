@@ -12,9 +12,9 @@ Source of truth for scope: [`ROADMAP.md`](ROADMAP.md) §10. This document turns 
 |---|---|---|
 | Unsupported statements displayed | 0 in 3,380 responses of the intensive campaign (95% upper bound 0.09%), [`campaign.md`](../eval/reports/campaign.md); but from 145 distinct questions, not 1,000 independent ones | 0 in >= 1,000 independent questions (upper bound < 0.3%) |
 | Verbatim quotes at the cited paragraph | 100% (11,403/11,403 in the campaign) | 100% on the full campaign |
-| Fault injection | 10 corruption types on real answers: 3,736/3,744 blocked (99.8%); 100% for fabricated names, citations and quotes; misses: 6 glued footnote markers, 1 added conclusion clause | The roadmap's full list, >= 99% per type, 100% for fabricated names and citations |
-| Unanswerable / out-of-scope | 10 unanswerable, 10 false premise: all correct; 68 out-of-scope: off-topic 37/38, foreign law 14/15, non-constitutional 9/15 refused | 200 unanswerable, 100 false premise, 100 non-existent names |
-| Prompt injection | 10 adversarial cases + 385 attacks appended to real scenarios, all resisted (retrieval drifts: first Article 37-38/77 vs 51 clean) | Planted poisoned documents, MCP attacks, external red team |
+| Fault injection | 10 corruption types on real answers: 3,741/3,741 blocked | The roadmap's full list, >= 99% per type, 100% for fabricated names and citations |
+| Unanswerable / out-of-scope | 10 unanswerable, 10 false premise: all correct; 68 out-of-scope: off-topic 37/38, foreign law 15/15, non-constitutional 9/15 refused | 200 unanswerable, 100 false premise, 100 non-existent names |
+| Prompt injection | 10 adversarial cases + 385 attacks appended to real scenarios, all resisted; instruction sentences are dropped before searching, so retrieval is unaffected (51/77, as clean) except for a named-case request (37/77); 54 criminal-lawyer questions incl. controversial and hostile: 0 crashes, 0 unsupported in 972 responses | Planted poisoned documents, MCP attacks, external red team |
 | Style invariance | 145/145 questions x all 18 depth x structure x tone combinations | All combinations incl. language, >= 5 profiles per campaign question |
 | Expert review | None (labels written by the developer) | >= 2 blind legal reviewers, >= 300 answers, Cohen's kappa |
 | MCP conformance | Official Python client, stdio + Streamable HTTP; 21 hostile tool calls, 0 crashes | Inspector full run, client matrix, OAuth flows, schema-aware fuzzing |
@@ -115,7 +115,7 @@ Each question runs under >= 5 user profiles. Results are reported with the rule-
 |---|---|---|
 | Unsupported claims displayed (campaign, >= 1,000 trials) | 0, with 95% upper bound | 0 in 3,380 responses from 145 questions |
 | Responses without citations | 0 | 0 |
-| Verifier fault-injection catch rate | >= 99% overall; 100% fabricated names and citations | 99.8% on real answers (10 types); 1 type to build, 2 to complete |
+| Verifier fault-injection catch rate | >= 99% overall; 100% fabricated names and citations | 100% on real answers (10 types, 3,741 claims); 1 type to build, 2 to complete |
 | Abstain correctness (unanswerable + false premise) | >= 95% | 100% on 28 |
 | Expert review: citation fidelity | >= 98% of sampled claims supported | Not run |
 | Expert review: overall correctness | Target set after the baseline (suggest >= 90%) | Not run |
