@@ -143,6 +143,19 @@ def test_foreign_law_is_declined() -> None:
     assert not foreign("Tell us about the law on arrest.")  # the pronoun, not the country
     assert not foreign("My client, an NRI back from the US, was arrested at Delhi airport.")
     assert not foreign("My client in India studied in the UK and was denied a passport.")
+    assert foreign("What does Miranda v. Arizona require police to tell a suspect?")
+    assert not foreign("Does Maneka Gandhi v. Union of India apply to passports?")
+
+
+def test_spelling_is_corrected_against_the_corpus() -> None:
+    from collections import Counter
+
+    from helperinlaw.retrieve.understand import correct_spelling
+
+    counts = Counter({"arrested": 50, "warrant": 40, "arrest": 90})
+    assert correct_spelling("He was arersted without a wararnt.", counts) == "He was arrested without a warrant."
+    assert correct_spelling("Rakesh was arrested.", counts) == "Rakesh was arrested."  # names are kept
+    assert correct_spelling("an unknownword here", counts) == "an unknownword here"
 
 
 def test_conversational_words_do_not_outrank_facts() -> None:
