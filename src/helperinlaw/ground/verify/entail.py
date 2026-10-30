@@ -7,12 +7,14 @@ Two judges, both conservative:
   rejected claim is dropped, never rewritten.
 """
 
+import re
 from typing import Literal
 
 from helperinlaw.core import ollama
-from helperinlaw.ground.text import content_terms, polarity_ok, stem
+from helperinlaw.ground.text import content_terms, normalise, polarity_ok, stem
 
 Verdict = Literal["supported", "partially", "unsupported"]
+CLAUSE = re.compile(r"[,;:]\s+")
 
 # Words that flip a legal outcome. A claim may not introduce one the quote doesn't contain.
 CRITICAL = {
@@ -43,10 +45,17 @@ def lexical_verdict(claim: str, quote: str) -> Verdict:
     c, q = content_terms(claim), content_terms(quote)
     if not c:
         return "unsupported"
+    # Two content words ("sentence", "death") match too many quotes; such a claim must be the quote's own text.
+    if len(c) < 3 and normalise(claim).rstrip(".") not in normalise(quote):
+        return "unsupported"
     missing = c - q
     if missing & CRITICAL:
         return "unsupported"
     cover = 1 - len(missing) / len(c)
+    # An added clause ("..., and the accused must therefore be acquitted") hides in a long
+    # claim's overall coverage, so every clause must clear the same bar.
+    if any(len(t - q) > 0.2 * len(t) for p in CLAUSE.split(claim) if (t := content_terms(p))):
+        return "partially"
     return "supported" if cover >= 0.8 else "partially" if cover >= 0.5 else "unsupported"
 
 
