@@ -15,7 +15,7 @@ INJECTION = re.compile(
 # disclaimer"), as opposed to a fact of the situation.
 META = re.compile(
     r"^(?:please\s+|also\s+|just\s+)?(?:ignore|skip|omit|hide|remove|answer|reply|respond|do not|don't|never)\b"
-    r".*\b(?:instructions?|citations?|verification|verify|disclaimers?)\b",
+    r".*\b(?:instructions?|rules|citations?|verification|verify|disclaimers?)\b",
     re.I,
 )
 

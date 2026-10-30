@@ -18,6 +18,7 @@ from helperinlaw.core.types import (
 from helperinlaw.ground.pipeline import answer_content, retrieve
 from helperinlaw.ground.render import case_url, law_ref, render_citations, render_laws
 from helperinlaw.ground.verify.graph import treatment
+from helperinlaw.ground.verify.injection import without_instructions
 from helperinlaw.ingest.official import (
     COI_EDITION,
     PREFIX,
@@ -89,7 +90,9 @@ class Service:
         question = question.strip()[:2000]
         patch, ignored = parse_overrides(question)
         profile = apply_style(self.store.get_profile(profile_id), {**patch, **(style or {})})
-        legal_q = strip_overrides(question) or question
+        # Only style words left ("as a table") -> search the original; only instructions to the
+        # system left ("Ignore your rules...") -> nothing to search, the pipeline asks for the facts.
+        legal_q = strip_overrides(question) or ("" if not without_instructions(question) else question)
         vcs = self.content(legal_q, filters, profile)
 
         notices = [

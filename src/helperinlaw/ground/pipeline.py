@@ -24,7 +24,7 @@ from helperinlaw.core.types import (
 from helperinlaw.ground.claim_extract import extractive_claims, llm_claims
 from helperinlaw.ground.verify import verify
 from helperinlaw.ingest.official import PREFIX, is_article, is_provision
-from helperinlaw.retrieve.evidence_gate import enough_evidence, foreign
+from helperinlaw.retrieve.evidence_gate import enough_evidence, foreign, wrongdoing
 from helperinlaw.retrieve.hybrid import search
 from helperinlaw.retrieve.rerank import rerank
 from helperinlaw.retrieve.rewrite import rewrite
@@ -38,8 +38,10 @@ STAIR_BOOST = 0.4  # added to STAIR's first pick (2/3 and 1/3 of it to the next 
 PARENT_WINDOW = 1  # neighbouring paragraphs added to each retrieved judgment passage
 # The Preamble and Schedules fill in the Articles (Article 246 -> Seventh Schedule) and match stray
 # words in long lists ("district" -> Sixth Schedule), so they rank behind Articles unless named.
+# Articles 366-367 (definitions, interpretation) likewise match any question using a defined word.
 SUPPORTING_PENALTY = 0.2
-NAMES_SUPPORTING = re.compile(r"\b(schedule|preamble)\b", re.I)
+DEFINITIONS = {f"{PREFIX}366", f"{PREFIX}367"}
+NAMES_SUPPORTING = re.compile(r"\b(schedule|preamble|366|367|definitions?|defined)\b", re.I)
 Mode = Literal["synthesised", "extractive"]
 
 
@@ -52,7 +54,8 @@ def retrieve(
     named = bool(NAMES_SUPPORTING.search(question))
 
     def penalty(case_id: str) -> float:
-        return SUPPORTING_PENALTY if is_provision(case_id) and not is_article(case_id) and not named else 0.0
+        supporting = case_id in DEFINITIONS or (is_provision(case_id) and not is_article(case_id))
+        return SUPPORTING_PENALTY if supporting and not named else 0.0
 
     # A scenario needs both: the constitutional text that governs it and precedent applying it,
     # searched separately so one long judgment can't crowd the Constitution out.
@@ -129,6 +132,13 @@ def abstain(
 def answer_content(
     store: Store, cfg: Settings, question: str, filters: Filters | None, profile: Profile
 ) -> VerifiedClaimSet:
+    if not question.strip():
+        return abstain(question, [], ["Describe the situation or the legal question; instructions on how to answer are not a question."])
+    if wrongdoing(question):
+        return abstain(question, [], [
+            "Helper in Law does not help destroy evidence, fabricate documents or evade the law. "
+            "It shows the law that applies to a situation, quoted from the official text."
+        ])
     if where := foreign(question):
         return abstain(question, [], [f"Helper in Law covers Indian law only; this question is about \"{where}\"."])
     sources, ok = retrieve(store, cfg, question, filters, profile)
