@@ -72,7 +72,8 @@ def main() -> None:
         f"| Citations verbatim at the cited paragraph | {tally.cites - tally.bad_cites} / {tally.cites} |",
         f"| Answers without citations | {tally.lacking} |",
         f"| Responses without the disclaimer | {tally.no_disclaimer} |",
-        f"| Median / slowest response | {times[len(times) // 2]:.2f} s / {times[-1]:.2f} s |", "",
+        # Not the maximum: a laptop that sleeps mid-run turns one response into hours.
+        f"| Median / 95th percentile response | {times[len(times) // 2]:.2f} s / {times[int(len(times) * 0.95)]:.2f} s |", "",
         "| Kind | Refused | A relevant Article shown (labelled questions) |", "|---|---|---|",
         *[f"| {k} | {refused[k]}/{kinds[k]} | {relevant[k]}/{labelled[k]} |" for k in kinds], "",
         "Hostile questions have no expected Article: the requirement is no crash, nothing unsupported, "
