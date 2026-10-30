@@ -44,18 +44,59 @@ HEADING = re.compile(
     r"(?P<title>[A-Z][^—–\n]{2,160}?)\]?(?:\.?\s*(?:—|––?)|\.-)",
 )
 NUMERIC = re.compile(r"\d+")
+ORDINALS = "FIRST SECOND THIRD FOURTH FIFTH SIXTH SEVENTH EIGHTH NINTH TENTH ELEVENTH TWELFTH".split()
+SCHEDULE = re.compile(rf"^\s*\d*\[?({'|'.join(ORDINALS)}) SCHEDULE\s*$")
+PARA_WORDS = 120  # a Schedule is split into passages of about this size, so a citation is precise
+
+
+def document_key(name: str) -> str:
+    """"Article 21" -> "21", "preamble" -> "preamble", "Seventh Schedule" / "Schedule 7" -> "schedule-7"."""
+    n = " ".join(name.lower().split()).removeprefix("article").strip()
+    if n == "preamble":
+        return n
+    if m := re.fullmatch(r"(?:the )?(\w+) schedule|schedule (\w+)", n):
+        word = (m.group(1) or m.group(2)).upper()
+        roman = "I II III IV V VI VII VIII IX X XI XII".split()
+        k = (ORDINALS.index(word) + 1 if word in ORDINALS else roman.index(word) + 1 if word in roman
+             else int(word) if word.isdigit() else 0)
+        return f"schedule-{k}" if 1 <= k <= len(ORDINALS) else n
+    return n.upper()
+
+
+# An omitted Article's stub: "380. [Provision as to President.].—Omitted by the Constitution
+# (Seventh Amendment) Act, 1956, s. 29 and Sch. (w.e.f. 1-11-1956)." Not enacted text.
+OMITTED = re.compile(
+    r"(?:\s\d{1,5}[A-Z]{0,2}\.)?\s*\.?\s*\[[^\[\]]{3,200}\]\s*\.?\s*[—–-]?\s*Omitted by .*?"
+    r"\(w\.e\.f\.\s*[\d\- ]+\)\.?"
+)
+GLUED_NOTE = re.compile(r"(?<=[a-z])\d{1,2}(?:,\d{1,2})*(?=[\s;,.:)\]]|$)")  # "rules1", "notification6,5"
+
+
+def tidy(text: str) -> str:
+    """Drop editorial footnote markers ("1[", "3***", "order1"), page headers and omitted-Article
+    stubs; rejoin words split at a line end ("twenty- one"); keep the enacted words."""
+    text = " ".join(text.split())  # also folds the PDF's non-breaking spaces
+    text = re.sub(r"THE CONSTITUTION OF INDIA(\s*\(Part [^)]*\))?(\s+\d{1,3}\b)?", " ", text)
+    text = re.sub(r"\((?:\w+ )?Schedule\)", " ", text)  # a Schedule's running header
+    text = re.sub(r"\d+\[", "[", text)
+    text = re.sub(r"\d*(?:\*\s*){3,}", "", text)  # "3***" and the spaced "* * * * *"
+    text = OMITTED.sub("", text)
+    text = GLUED_NOTE.sub("", text)
+    text = re.sub(r"(?<=[a-z])- (?=[a-z])", "-", text)
+    text = re.sub(r"\s+(?=[,;:])", "", text)  # "article 32 , every" -> "article 32, every"
+    return " ".join(text.split())
 
 
 def clean_markers(text: str) -> str:
-    """Drop editorial footnote markers ("1[", "3***") and page rules; keep the enacted words."""
-    text = " ".join(text.split())  # also folds the PDF's non-breaking spaces
-    text = re.sub(r"THE CONSTITUTION OF INDIA(\s*\(Part [^)]*\))?(\s+\d{1,3}\b)?", " ", text)
-    text = re.sub(r"\d+\[", "[", text)
-    text = re.sub(r"\d*(?:\*\s*){3,}", "", text)  # "3***" and the spaced "* * * * *"
-    text = " ".join(text.split())
+    """tidy(), then cut what trails an Article: the next Part's or Chapter's title ("CHAPTER
+    II.—PARLIAMENT General"), a group heading ("The Attorney-General for India"), or the number
+    of an omitted Article ("[2A")."""
+    text = tidy(text)
     text = re.sub(r"\s+\[?PART [IVXLC]+[A-Z]?\b.*$", "", text)  # the next Part's title
-    text = re.sub(r"(?<=[.;:\])])\s+[A-Z][A-Za-z ,]{3,60}$", "", text)  # a trailing group heading
-    return text.strip(" ]")
+    text = re.sub(r"\s*\S*CHAPTER [IVXL]+\s?\.\s*[—–-].*$", "", text)  # "1(4)CHAPTER IV.—THE UNION JUDICIARY"
+    text = re.sub(r"\s+\[\d{1,3}[A-Z]{1,2}\]?$", "", text)
+    text = re.sub(r"(?<=[.;:\])])\s+\[?[A-Z][A-Za-z ,-]{3,80}\]?$", "", text)  # a trailing group heading
+    return text.rstrip(" [").strip(" ]")
 
 
 @dataclass
@@ -107,7 +148,7 @@ def parse_articles(lines: list[tuple[int, str]]) -> list[Article]:
         if not started and re.search(r"\b1\.\s+Name and territory of the Union\.\s*—", line):
             started = True
         if started:
-            if re.match(r"^\s*(FIRST SCHEDULE|THE FIRST SCHEDULE)\b", line):
+            if SCHEDULE.match(line):  # "1[FIRST SCHEDULE": the Articles end here
                 break
             body.append((page, line))
     text, pages = "", []
@@ -141,6 +182,68 @@ def parse_articles(lines: list[tuple[int, str]]) -> list[Article]:
     for a in articles:
         seen.setdefault(a.number, a)
     return list(seen.values())
+
+
+@dataclass
+class Document:
+    """The Preamble or a Schedule: stored like an Article, as `coi-preamble`, `coi-schedule-7`."""
+
+    key: str
+    title: str
+    subtitle: str
+    paragraphs: list[str]
+    page: int
+
+
+def parse_preamble(lines: list[tuple[int, str]]) -> Document | None:
+    start = next((i for i, (_, line) in enumerate(lines) if line.strip() == "PREAMBLE"), None)
+    if start is None:
+        return None
+    body = []
+    for _, line in lines[start + 1 :]:
+        if re.match(r"^\s*PART I\s*$", line):
+            break
+        body.append(line)
+    return Document("preamble", "Preamble", "", [tidy(" ".join(body))], lines[start][0])
+
+
+def parse_schedules(lines: list[tuple[int, str]]) -> list[Document]:
+    """The twelve Schedules, between Article 395 and "APPENDIX I" (amending Acts, not the
+    Constitution). Each Schedule's text is split at its numbered entries into ~PARA_WORDS passages."""
+    first = next((i for i, (_, line) in enumerate(lines) if "Name and territory of the Union" in line), 0)
+    docs: list[Document] = []
+    current: tuple[int, int, list[str]] | None = None  # (ordinal, page, lines)
+
+    def close() -> None:
+        if current:
+            k, page, body = current
+            subtitle = body[0].strip() if body and re.match(r"^\s*[\[(]Articles?", body[0]) else ""
+            text = tidy(" ".join(body[1 if subtitle else 0 :]))
+            # Numbered entries first; an entry still too long is split at its sentences.
+            units = [x for e in re.split(r"\s(?=\d{1,3}[A-Z]?\.\s)", text)
+                     for x in (re.split(r"(?<=[.;:])\s+|(?<=[.;:][”\"])\s+", e) if len(e.split()) > PARA_WORDS else [e])]
+            # A table row with no sentence end (the First Schedule's territories): cut by length.
+            units = [" ".join(w[i : i + PARA_WORDS]) for u in units
+                     for w in [u.split()] for i in range(0, len(w), PARA_WORDS)]
+            paras: list[str] = []
+            for u in units:
+                if paras and len(paras[-1].split()) + len(u.split()) <= PARA_WORDS:
+                    paras[-1] += " " + u
+                else:
+                    paras.append(u)
+            docs.append(Document(f"schedule-{k}", f"{ORDINALS[k - 1].title()} Schedule",
+                                 re.sub(r"^[\[(](.*)[\])]$", r"\1", tidy(subtitle)), [p for p in paras if p.strip()], page))
+
+    for page, line in lines[first:]:
+        if line.strip() == "APPENDIX I":
+            break
+        if m := SCHEDULE.match(line):
+            close()
+            current = (ORDINALS.index(m.group(1)) + 1, page, [])
+        elif current:
+            current[2].append(line)
+    close()
+    return docs
 
 
 TOC_PAGES = range(3, 31)  # PDF pages 4-31: the official "Arrangement of Articles"
@@ -233,16 +336,36 @@ def ingest_constitution(store: Store, pdf: Path | None = None) -> int:
     toc = parse_toc(toc_text(pdf))
     # The official table of contents lists the Articles in force; others are "Omitted by..." stubs.
     listed = {e.number for e in toc}
+    lines = english_lines(pdf)
     numbers = set()
-    for a in parse_articles(english_lines(pdf)):
+    for a in parse_articles(lines):
         if len(a.text) >= 15 and (a.number in listed or not toc):
             store_article(store, a, sha)
             numbers.add(a.number)
+    keep = set(numbers)
+    for d in [p for p in [parse_preamble(lines)] if p] + parse_schedules(lines):
+        store_document(store, d, sha)
+        keep.add(d.key)
     for case in store.list_cases():  # stubs stored by an earlier ingest
-        if is_provision(case.id) and case.id.removeprefix(PREFIX) not in numbers:
+        if is_provision(case.id) and case.id.removeprefix(PREFIX) not in keep:
             store.delete_case(case.id)
     store.replace_toc([e for e in toc if e.number in numbers])
     return len(numbers)
+
+
+def store_document(store: Store, d: Document, sha: str) -> None:
+    case = Case(
+        id=f"{PREFIX}{d.key}",
+        title=f"{d.title}, Constitution of India",
+        court=COI_COURT,
+        date=COI_DATE,
+        citation=d.title,
+        neutral_citation=d.subtitle,
+        url=f"{COI_URL}#page={d.page}",
+        pdf_sha256=f"{sha}:{d.key}",
+    )
+    store.add_case(case, [Paragraph(case_id=case.id, n=i + 1, text=t, section="provision")
+                          for i, t in enumerate(d.paragraphs)])
 
 
 def store_article(store: Store, a: Article, sha: str) -> None:

@@ -87,6 +87,39 @@ def test_table_of_contents() -> None:
 def test_clean_markers() -> None:
     raw = "No person 1[shall be] deprived 3*** of his life. THE CONSTITUTION OF INDIA (Part III) 14 Right"
     assert clean_markers(raw) == "No person [shall be] deprived of his life."
+    # Each of these leaked into stored Articles before (found by auditing the whole text).
+    assert clean_markers(
+        "dissolution of that Assembly. 380. [Provision as to President.].—Omitted by the Constitution "
+        "(Seventh Amendment) Act, 1956, s. 29 and Sch. (w.e.f. 1-11-1956)."
+    ) == "dissolution of that Assembly."
+    assert clean_markers("specified in rules1 made by the President, by public notification6,5 specify") == (
+        "specified in rules made by the President, by public notification specify"
+    )
+    assert clean_markers("the age of twenty- one years in article 32 , every") == "the age of twenty-one years in article 32, every"
+    for tail in (" CHAPTER II.—PARLIAMENT General", " 1(4)CHAPTER IV.—THE UNION JUDICIARY", " [2A",
+                 " [Saving of Certain Laws", " The Attorney-General for India"):
+        assert clean_markers("as it thinks fit." + tail) == "as it thinks fit.", tail
+
+
+def test_preamble_and_schedules() -> None:
+    from helperinlaw.ingest.official import parse_preamble, parse_schedules
+
+    text = lines(
+        "PREAMBLE", "WE, THE PEOPLE OF INDIA, having solemnly resolved", "PART I",
+        "1. Name and territory of the Union.—(1) India, that is Bharat, shall be a Union of States.",
+        "2. Admission of new States.—Parliament may by law admit new States.",
+        "1[SEVENTH SCHEDULE", "(Article 246)", "List I—Union List", "1. Defence of India.", "2. Naval forces.",
+        "(Seventh Schedule)", "1[TWELFTH SCHEDULE", "(Article 243W)", "1. Urban planning.",
+        "APPENDIX I", "THE CONSTITUTION (ONE HUNDREDTH AMENDMENT) ACT, 2015",
+    )
+    pre = parse_preamble(text)
+    assert pre and pre.paragraphs == ["WE, THE PEOPLE OF INDIA, having solemnly resolved"]
+    seventh, twelfth = parse_schedules(text)
+    assert (seventh.key, seventh.title, seventh.subtitle) == ("schedule-7", "Seventh Schedule", "Article 246")
+    assert seventh.paragraphs == ["List I—Union List 1. Defence of India. 2. Naval forces."]
+    assert twelfth.paragraphs == ["1. Urban planning."]  # the Appendix is not part of it
+    articles = parse_articles(text)
+    assert articles[-1].number == "2" and articles[-1].text == "Parliament may by law admit new States."
 
 
 def test_fixture_is_the_official_wording() -> None:
