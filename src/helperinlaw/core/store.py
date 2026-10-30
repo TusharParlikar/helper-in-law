@@ -7,9 +7,11 @@ Phase 1. Move to Postgres/Qdrant when the corpus outgrows one process (~100k chu
 
 import itertools
 import json
+import re
 import sqlite3
 import struct
 import threading
+from collections import Counter
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -87,6 +89,7 @@ class Store:
             Path(path).parent.mkdir(parents=True, exist_ok=True)
             self._target, self._uri = str(path), False
         self._local = threading.local()
+        self._words: dict[str, Counter[str]] = {}
         self._keeper = self._connect()  # also keeps an in-memory database alive
         self._keeper.executescript(SCHEMA)
         self._local.db = self._keeper
@@ -230,6 +233,16 @@ class Store:
     def toc(self) -> list[TocEntry]:
         rows = self.db.execute("SELECT number, title, part, chapter, grp FROM toc ORDER BY ord")
         return [TocEntry(number=r[0], title=r[1], part=r[2], chapter=r[3], group=r[4]) for r in rows]
+
+    def word_counts(self, index_version: str) -> Counter[str]:
+        """Words of the indexed text and how often they occur, for spelling correction.
+        ponytail: built on first use (~3 s for the full corpus); store it at index time if that hurts."""
+        if index_version not in self._words:
+            counts: Counter[str] = Counter()
+            for (text,) in self.db.execute("SELECT text FROM chunks WHERE index_version=?", (index_version,)):
+                counts.update(re.findall(r"[a-z]+", text.lower()))
+            self._words[index_version] = counts
+        return self._words[index_version]
 
     def get_chunk(self, index_version: str, chunk_id: str) -> Chunk | None:
         row = self.db.execute(

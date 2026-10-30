@@ -1,6 +1,7 @@
 """Query understanding: filters, statutes and case names pulled out of a plain question."""
 
 import re
+from collections import Counter
 
 from pydantic import BaseModel
 
@@ -36,6 +37,31 @@ class Query(BaseModel):
     filters: Filters
     statutes: list[tuple[str, str]] = []
     case_names: list[str] = []
+
+
+LETTERS = "abcdefghijklmnopqrstuvwxyz"
+
+
+def _edits(w: str) -> set[str]:
+    """Words one typo away: a letter deleted, swapped with the next, replaced or inserted."""
+    splits = [(w[:i], w[i:]) for i in range(len(w) + 1)]
+    return {a + b[1:] for a, b in splits if b} | {a + b[1] + b[0] + b[2:] for a, b in splits if len(b) > 1} | {
+        a + c + b[1:] for a, b in splits if b for c in LETTERS
+    } | {a + c + b for a, b in splits for c in LETTERS}
+
+
+def correct_spelling(text: str, counts: Counter[str]) -> str:
+    """Replaces a lower-case word the corpus never uses with its most frequent one-typo
+    neighbour ("arersted" -> "arrested"). Capitalised words (names) and short words are kept."""
+
+    def fix(m: re.Match[str]) -> str:
+        w = m.group(0)
+        if len(w) < 5 or not w.islower() or w in counts:
+            return w
+        known = [e for e in _edits(w) if counts[e] >= 3]
+        return max(known, key=lambda e: (counts[e], e)) if known else w
+
+    return re.sub(r"[A-Za-z]+", fix, text)
 
 
 def terms(text: str) -> list[str]:
