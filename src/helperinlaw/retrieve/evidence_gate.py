@@ -59,6 +59,20 @@ FOREIGN = re.compile(
     rf"|\bv(?:s)?\.?\s+{_PLACE}\b"  # a foreign party: "Miranda v. Arizona"
 )
 INDIA = re.compile(r"\b(?:India|Indian|Bharat)\b")
+# A request for help with wrongdoing, not a question about the law. Needs intent ("wants to",
+# "how can"): "my client is accused of destroying evidence" is an ordinary question.
+WRONGDOING = re.compile(
+    # The asker's or the client's own intent; "the police want to destroy..." is a complaint.
+    r"\b(?:(?:my client|i|he|she|we) (?:wants?|plans?|intends?|needs?) to|how (?:can|do|should) (?:my client|i|he|she|we)"
+    r"|how to|help (?:me|him|her|my client)(?: to)?)\b.{0,60}?"
+    r"\b(?:destroy|tamper|delete|hide|get rid of|bribe|threaten|intimidate|flee|abscond|evade|leave the country)\b"
+    r"|\b(?:write|draft|make|create|prepare)\b.{0,20}\b(?:fake|forged|false|fabricated)\b",
+    re.I,
+)
+
+
+def wrongdoing(question: str) -> bool:
+    return bool(WRONGDOING.search(question))
 
 
 def legal_question(q: Query) -> bool:
