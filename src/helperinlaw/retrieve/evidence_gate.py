@@ -31,7 +31,8 @@ husband dowry murder theft fraud cheating tax
 preamble schedule schedules secular secularism sovereign socialist republic democratic federal
 amendment amend legislature legislator legislators mla mlas mp mps speaker governor president
 minister ministers cabinet election elections electoral disqualified disqualification defection
-impeachment ordinance emergency union centre panchayat municipality citizenship""".split()}
+impeachment ordinance emergency union centre panchayat municipality citizenship
+policeman policemen constable defence homicide assault accused""".split()}
 # (Not the words of Article titles: those include "water", "name", "territory".)
 SECTION_LIKE = re.compile(r"\b\d{1,4}[A-Z]{1,3}\b")  # "65B", "304B", "21A": a provision, whatever the Act
 

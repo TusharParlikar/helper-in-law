@@ -133,6 +133,8 @@ LEGAL_TERMS: dict[str, list[str]] = {
     "encounter": ["deprived of his life", "procedure established by law"],
     "shoot": ["deprived of his life", "life"],
     "killed": ["deprived of his life", "life"],
+    "unalived": ["killed", "deprived of his life", "life"],  # social-media euphemism for killed
+    "defence": ["private defence", "self-defence"],
     "lynching": ["deprived of his life", "life", "protection"],
     "juvenile": ["children", "child"],
     "sedition": ["freedom of speech and expression", "reasonable restrictions", "public order"],
