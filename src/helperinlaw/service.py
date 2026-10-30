@@ -18,7 +18,7 @@ from helperinlaw.core.types import (
 from helperinlaw.ground.pipeline import answer_content, retrieve
 from helperinlaw.ground.render import case_url, law_ref, render_citations, render_laws
 from helperinlaw.ground.verify.graph import treatment
-from helperinlaw.ingest.official import COI_EDITION, PREFIX, ingest_constitution, is_provision
+from helperinlaw.ingest.official import COI_EDITION, PREFIX, document_key, ingest_constitution, is_provision
 from helperinlaw.parse.statutes import ACT_NAMES, aliases, extract_statutes, normalise_act
 from helperinlaw.present.final_guard import guard
 from helperinlaw.present.overrides import parse_overrides, strip_overrides
@@ -279,7 +279,7 @@ class Service:
     def get_article(self, number: str) -> dict[str, Any]:
         """Official text of a Constitution article. Fetches the Government of India's PDF from
         the internet on first use if it isn't indexed yet."""
-        number = number.strip().upper().removeprefix("ARTICLE").strip()
+        number = document_key(number)
         if self.store.get_case(f"{PREFIX}{number}") is None:
             ingest_constitution(self.store)  # downloads the official PDF, then parses it
         case = self.store.get_case(f"{PREFIX}{number}")
@@ -288,8 +288,9 @@ class Service:
         info = self.lookup_statute("CONST", number)
         return {
             "article": number,
+            "label": case.citation.replace("Art. ", "Article "),  # "Article 21", "Seventh Schedule", "Preamble"
             "title": case.neutral_citation,
-            "text": self.store.get_paragraphs(case.id)[0].text,
+            "text": "\n\n".join(p.text for p in self.store.get_paragraphs(case.id)),
             "official_url": case.url,
             "source": COI_EDITION,
             "where": info["where"],
