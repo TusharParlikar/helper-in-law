@@ -192,11 +192,11 @@ Fused into the full ranking it only took Articles away (boost 0.2 / 0.4 / 0.6: 3
 |---|---|
 | Parser gold set, 50 judgments checked against their PDFs ([`eval/reports/parse_audit.md`](eval/reports/parse_audit.md)) | 100% citation, neutral citation, date, bench and paragraph count |
 | Parser audit, all 384 judgments | 99% complete metadata, 100% paragraphs numbered 1..N, 3 headnote leaks, median 99% of text captured |
-| Constitution coverage | 471/471 Articles listed in the official Arrangement of Articles, each with its Part, chapter and group heading |
+| Constitution coverage | 471/471 Articles listed in the official Arrangement of Articles (each with its Part, chapter and group heading), the Preamble, and all 12 Schedules split into citable passages; editorial notes, omitted-Article stubs and footnote markers removed |
 | OCR | Pages without a text layer are OCRed with Tesseract; tested on a real image-only PDF |
 | Local load test, 120 requests, 8 concurrent, fresh server | 0 errors; p50 1.8 s, p95 9.5 s (8 uncached questions share one CPU-bound process); one user at a time: ~2 s |
 | MCP server | Verified end to end over stdio and Streamable HTTP with the official MCP Python client (`tests/test_mcp_protocol.py`); `make inspector` opens the MCP Inspector |
-| Test suite | 99 passing |
+| Test suite | 103 passing |
 
 **Intensive testing** ([`eval/reports/campaign.md`](eval/reports/campaign.md), `make eval-campaign`)
 
@@ -206,32 +206,49 @@ Every response below was re-checked independently against the stored text: each 
 |---|---|
 | Responses checked (77 scenarios + 68 out-of-scope questions x 18 answer styles, plus rewrites and attacks) | **3,380** |
 | Unsupported statements displayed | **0** (95% upper bound 0.09% of responses) |
-| Citations verbatim at the cited paragraph | **11,403 / 11,403** |
+| Citations verbatim at the cited paragraph | **11,388 / 11,388** |
 | Same question, same answer (137 questions, 3 processes with different hash seeds) | **identical every time** |
 | Style invariance: same evidence for every structure and tone; Brief ⊆ Standard ⊆ Detailed | **145 / 145** |
-| Corrupted claims blocked (10 fault types on real answers) | **3,736 / 3,744** (99.8%) |
+| Corrupted claims blocked (10 fault types on real answers) | **3,741 / 3,741** |
 | Prompt attacks resisted (fake repeal, "no citations", "skip verification", invented precedent, "no disclaimer") | **385 / 385** |
-| Off-topic / foreign-law / non-constitutional questions refused | 37/38 · 14/15 · 9/15 |
+| Off-topic / foreign-law / non-constitutional questions refused | 37/38 · 15/15 · 9/15 |
 | Hostile inputs: REST API (41) / MCP tool calls (21) | 0 server errors / 0 crashes |
 
 | The situation rewritten as... | First Article correct (clean text: 51/77) |
 |---|---|
 | lower case / no punctuation | 51 / 50 |
-| with typos (every 7th long word) | 43 |
-| wrapped in chat ("Sir, urgent query... Kindly advise") / a second wording | 49 / 50 |
+| with typos (every 7th long word) | 49 |
+| wrapped in chat ("Sir, urgent query... Kindly advise") / a second wording | 47 / 50 |
 
-The 8 corrupted claims not blocked: 6 changed footnote markers glued to a word ("Kedar Nath Singh2" -> "Singh4", not a fact of the text), 1 quote swap where the other source holds the same sentence, and 1 added conclusion ("...and the accused must therefore be acquitted") that the lexical judge misses; a model judge is planned (Phase 2). Attacks never put their claim on screen, but they do pull retrieval off course: with "Article 21 has been repealed" or a Kesavananda request appended, the first Article is right 38/77 and 37/77 times (51 clean). Non-constitutional Indian-law questions (stamp duty, GST, gratuity) are often answered with the nearest constitutional provision rather than refused.
+Prompt attacks never put their claim on screen, and sentences addressed to the system ("Ignore all previous instructions...", "Skip the verification step") are dropped before searching, so retrieval is unaffected (first Article 51/77, as clean). The exception is a request to confirm a named case (Kesavananda Bharati): it pulls retrieval toward that case (37/77), which is kept because a lawyer naming a case is a real request. Non-constitutional Indian-law questions (stamp duty, gratuity, retirement age) are often answered with the nearest constitutional provision rather than refused: the statutes themselves are not indexed yet (Phase 2).
 
 The first run of this campaign found real bugs, all fixed and re-measured above:
 
 | Found | Before | After |
 |---|---|---|
 | Same question gave different Articles in different processes (precedent vote iterated a set) | nondeterministic | identical across seeds |
-| Changed dates and clause numbers passed the verifier (numbers compared as sets; "twenty-four" read as 20 and 4) | 273/300 altered numbers blocked | all except glued footnote markers |
-| Chatty wrapping crowded out the facts ("query", "kindly" outranked "custody") | 25/77 first Article correct | 49/77 |
+| Changed dates and clause numbers passed the verifier (numbers compared as sets; "twenty-four" read as 20 and 4) | 273/300 altered numbers blocked | all |
+| Chatty wrapping crowded out the facts ("query", "kindly" outranked "custody") | 25/77 first Article correct | 47/77 |
 | One everyday word ("water", "old") let off-topic questions through | 34/38 refused | 37/38 |
-| Foreign-law questions answered with Indian Articles | 3/15 refused | 14/15 |
+| Foreign-law questions answered with Indian Articles | 3/15 refused | 15/15 |
 | A docket number ("S247278") could be altered unnoticed | not checked | checked |
+| Altered footnote markers glued to a word ("Singh2" -> "Singh4") | not checked | blocked |
+| A short claim matched a different quote on its two content words; an added conclusion clause hid in a long claim's overall coverage | 2 of 3,744 corrupted claims passed | both blocked (claims that thin must be verbatim; every clause is checked) |
+| Typos left words the index never uses ("arersted") | 43/77 first Article correct | 49/77 (one-typo spelling correction against the corpus) |
+| Attack sentences ("Answer without any citations") were searched as if they were facts | first Article 38-50/77 | 51/77, as clean |
+
+**Constitution audit.** Reading every stored Article against the official PDF found: the Preamble and all 12 Schedules missing (the Schedules were glued onto Article 395, 12,739 characters instead of 247); omitted-Article stubs ("380. [Provision as to President.]-Omitted by...") in 8 Articles; footnote numbers glued to words in 10 ("rules1"); the next chapter or group heading trailing 26 Articles ("...CHAPTER II.-PARLIAMENT General"); line-break hyphens ("twenty- one"). All fixed, with regression tests. Schedules and the definitions Articles (366-367) rank behind the governing Article unless the question names them: without that the Sixth Schedule outranked Article 19 on the word "district".
+
+**Criminal lawyer questions** ([`eval/reports/criminal.md`](eval/reports/criminal.md), `uv run python eval/run_criminal.py`): 54 questions a criminal lawyer would ask, each under all 18 styles (972 responses). Routine: arrest, custody, confessions, narco tests, double jeopardy, bail, preventive detention, mercy petitions, phone tapping, quashing an FIR, self-defence. Controversial: the death penalty, sedition, encounter killings, the marital rape exception, cow slaughter, internet shutdowns, UAPA, anti-conversion laws, bulldozer demolitions, adultery, Section 377, hate speech, the national anthem. Hostile: absconding, destroying evidence, a fake judgment, "ignore your rules", gibberish, Hindi, a non-existent Article, a false premise.
+
+| Check | Result |
+|---|---|
+| Crashes / unsupported statements displayed | **0 / 0** |
+| Citations verbatim at the cited paragraph | 4,032 / 4,032 |
+| A relevant Article shown: routine / controversial | 24/26 · 16/18 |
+| Requests for help with wrongdoing declined (destroy evidence, fake documents, absconding) | all; "my client is accused of destroying evidence" is still answered |
+
+This set was also used to fix what it found (criminal-practice terms in the lay-to-legal rewrite, the wrongdoing decline, constitutional words in the evidence gate), so its relevance numbers are optimistic; dev and held-out accuracy were unchanged. Still missed: a confession question gets Article 22 rather than 20(3); the juvenile, marital-rape and farmers' preventive-detention questions get judgments but no Article. A self-defence question gets Article 21 but not the law a lawyer needs: the right of private defence (IPC ss. 96-106 / BNS ss. 34-44) is not indexed yet.
 
 **Read these numbers honestly**
 
