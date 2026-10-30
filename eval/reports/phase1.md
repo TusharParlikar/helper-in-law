@@ -10,7 +10,7 @@ Scope: everything Phase 1 of [`docs/ROADMAP.md`](../../docs/ROADMAP.md) asks for
 | Supreme Court judgments | 384, 2014-2024, CC-BY-4.0 open dataset; only the Court's own numbered paragraphs |
 | Index | v1, 8,946 passages of ~300 words on paragraph boundaries, SQLite FTS5 (BM25); parent expansion adds neighbouring paragraphs at answer time |
 | Interfaces | Streamlit UI (research, Constitution lookup, onboarding, PDF report), REST API, MCP server (stdio + Streamable HTTP) |
-| Tests | 99 passing |
+| Tests | 103 passing |
 
 ## Accuracy
 
@@ -52,12 +52,16 @@ The table of contents still paid off: comparing it with the parsed Articles show
 | Citations verbatim at the cited paragraph | 11,403 / 11,403 |
 | Determinism across 3 processes with different hash seeds | 137/137 questions identical |
 | Style invariance (same evidence per depth; Brief ⊆ Standard ⊆ Detailed) | 145/145 |
-| Corrupted claims blocked (10 fault types, real answers) | 3,736 / 3,744 (99.8%) |
+| Corrupted claims blocked (10 fault types, real answers) | 3,741 / 3,741 |
 | Prompt attacks resisted | 385 / 385 |
-| Refused: off-topic / foreign law / non-constitutional Indian law | 37/38 · 14/15 · 9/15 |
+| Refused: off-topic / foreign law / non-constitutional Indian law | 37/38 · 15/15 · 9/15 |
 | Hostile REST requests / MCP calls | 0 server errors / 0 crashes |
 
-The first campaign run found six bugs, fixed and re-measured: answers changing with the process's hash seed (the precedent vote iterated a set); changed dates and clause numbers passing the verifier (numbers compared as a set, "twenty-four" split into 20 and 4); docket numbers not checked; conversational words outranking the facts (25 -> 49/77 first Article correct when a situation is wrapped in chat); a single everyday word letting off-topic questions through (34 -> 37/38 refused); foreign-law questions answered with Indian Articles (3 -> 14/15 refused). Remaining weaknesses: an added conclusion clause can pass the lexical entailment judge (1/467); appended attack text pulls retrieval off course (first Article 37-38/77 vs 51 clean) though it never reaches the screen; non-constitutional Indian-law questions are often answered with the nearest constitutional provision. Dev and held-out accuracy were unchanged by the fixes.
+The first campaign run found six bugs, fixed and re-measured: answers changing with the process's hash seed (the precedent vote iterated a set); changed dates and clause numbers passing the verifier (numbers compared as a set, "twenty-four" split into 20 and 4); docket numbers not checked; conversational words outranking the facts (25 -> 49/77 first Article correct when a situation is wrapped in chat); a single everyday word letting off-topic questions through (34 -> 37/38 refused); foreign-law questions answered with Indian Articles (3 -> 14/15 refused). A second round fixed the verifier's last misses (glued footnote markers, a two-word claim matching another quote, an added conclusion clause: now 3,741/3,741 blocked), dropped instruction sentences before searching (attack drift gone: 51/77 as clean), and added one-typo spelling correction (typos 43 -> 49/77). Remaining weaknesses: a request to confirm a named case still pulls retrieval toward it (37/77); non-constitutional Indian-law questions are often answered with the nearest constitutional provision. Dev and held-out accuracy were unchanged by the fixes.
+
+**Constitution audit.** Every stored Article was read against the official PDF: the Preamble and all 12 Schedules were missing (glued onto Article 395), omitted-Article stubs sat in 8 Articles, footnote numbers in 10, the next heading trailed 26. All fixed and tested; the corpus is now 471 Articles + the Preamble + 12 Schedules (106 searchable passages). Schedules and Articles 366-367 rank behind governing Articles unless named.
+
+**Criminal lawyer questions** ([`criminal.md`](criminal.md)): 54 routine, controversial and hostile questions x 18 styles = 972 responses, 0 crashes, 0 unsupported, 4,032/4,032 citations verbatim; a relevant Article shown for 24/26 routine and 16/18 controversial questions (the set was also used for fixes, so this is optimistic); requests for help with wrongdoing declined. Not covered: the right of private defence (IPC/BNS) and other statutes, which are not indexed yet.
 
 ## Grounding
 

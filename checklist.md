@@ -84,7 +84,7 @@ Tracks every Phase 1 item in [`docs/ROADMAP.md`](docs/ROADMAP.md) (§6 milestone
 
 ## M10 Hardening
 
-- [x] Unit / integration tests (99), parser golden tests, verification fault-injection tests (10 corruption types; 3,736/3,744 blocked on real answers), intensive campaign ([`campaign.md`](eval/reports/campaign.md))
+- [x] Unit / integration tests (103), parser golden tests, verification fault-injection tests (10 corruption types; 3,741/3,741 blocked on real answers), intensive campaign ([`campaign.md`](eval/reports/campaign.md)), 54 criminal-lawyer questions ([`criminal.md`](eval/reports/criminal.md))
 - [x] Baseline load test (local): 0 errors, warm p95 2.3 s, fresh-server p95 8.8 s
 - [x] README, architecture doc, reindex runbook
 - [x] Phase 1 evaluation report with ablation table ([`phase1.md`](eval/reports/phase1.md), [`ablation.md`](eval/reports/ablation.md))
