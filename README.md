@@ -47,7 +47,7 @@ It answers **only** from those sources. Every statement carries the exact quote 
 
 | Source | What | Licence |
 |---|---|---|
-| The Constitution of India [As on 1st May, 2024], Legislative Department | All articles, each linked to its page in the official PDF | Official Government publication |
+| The Constitution of India [As on 1st May, 2024], Legislative Department | All 471 Articles in force, the Preamble and the 12 Schedules, each linked to its page in the official PDF | Official Government publication |
 | Indian Supreme Court Judgments (AWS Open Data, Dattam Labs) | Supreme Court judgments applying key fundamental-rights articles (384 from 2014-2024 in the measured build) | CC-BY-4.0 |
 
 It is exposed three ways, all backed by one core service:
@@ -83,6 +83,7 @@ How:
 | Completeness | Retrieval can miss a relevant case |
 | Currency | A case may have been overruled after the corpus date |
 | Interpretation | A faithful paraphrase can still be a wrong reading of the law |
+| Statutes | Only the Constitution and Supreme Court judgments are indexed. A question that turns on a statute (the right of private defence in IPC ss. 96-106 / BNS ss. 34-44, stamp duty, gratuity) gets the nearest constitutional provision, not the section itself; indexing the statutes is Phase 2 |
 
 ---
 
